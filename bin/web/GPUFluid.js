@@ -2285,10 +2285,6 @@ snow_App.prototype = {
 	}
 	,ontickend: function() {
 	}
-	/*,onkeydown: function(keycode,scancode,repeat,mod,timestamp,window_id) {
-	}
-	,onkeyup: function(keycode,scancode,repeat,mod,timestamp,window_id) {
-	}*/
 	,ontextinput: function(text,start,length,type,timestamp,window_id) {
 	}
 	,onmousedown: function(x,y,button,timestamp,window_id) {
@@ -2304,14 +2300,6 @@ snow_App.prototype = {
 	,ontouchup: function(x,y,dx,dy,touch_id,timestamp) {
 	}
 	,ontouchmove: function(x,y,dx,dy,touch_id,timestamp) {
-	}
-	,ongamepadaxis: function(gamepad,axis,value,timestamp) {
-	}
-	,ongamepaddown: function(gamepad,button,value,timestamp) {
-	}
-	,ongamepadup: function(gamepad,button,value,timestamp) {
-	}
-	,ongamepaddevice: function(gamepad,id,type,timestamp) {
 	}
 	,internal_init: function() {
 		this.sim_time = 0;
