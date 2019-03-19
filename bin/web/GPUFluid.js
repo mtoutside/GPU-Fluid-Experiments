@@ -11462,8 +11462,6 @@ snow_api_buffers__$Uint8Array_Uint8Array_$Impl_$.BYTES_PER_ELEMENT = 1;
 snow_core_web_Runtime.web_window_id = 1;
 snow_core_web_Runtime.timestamp_start = 0.0;
 snow_core_web_Runtime.key_press_ignored = [8,13];
-
-/*----------------------------------------------------------------- */
 snow_modules_opengl_web_GL.DEPTH_BUFFER_BIT = 256;
 snow_modules_opengl_web_GL.STENCIL_BUFFER_BIT = 1024;
 snow_modules_opengl_web_GL.COLOR_BUFFER_BIT = 16384;
@@ -11761,11 +11759,6 @@ snow_modules_opengl_web_GL.UNPACK_PREMULTIPLY_ALPHA_WEBGL = 37441;
 snow_modules_opengl_web_GL.CONTEXT_LOST_WEBGL = 37442;
 snow_modules_opengl_web_GL.UNPACK_COLORSPACE_CONVERSION_WEBGL = 37443;
 snow_modules_opengl_web_GL.BROWSER_DEFAULT_WEBGL = 37444;
-/*----------------------------------------------------------------- */
-
-
-
-
 snow_types_Config.app_runtime = "snow.core.web.Runtime";
 snow_types_Config.app_config = "config.json";
 snow_types_Config.app_ident = "com.haxiomic.gpufluid";
