@@ -2,7 +2,7 @@
 (function ($global) { "use strict";
 var $hxClasses = {},$estr = function() { return js_Boot.__string_rec(this,''); };
 function $extend(from, fields) {
-        function Inherit() {} Inherit.prototype = from; var proto = new Inherit();
+	function Inherit() {} Inherit.prototype = from; var proto = new Inherit();
 	for (var name in fields) proto[name] = fields[name];
 	if( fields.toString !== Object.prototype.toString ) proto.toString = fields.toString;
 	return proto;
@@ -1256,12 +1256,8 @@ shaderblox_ShaderBase.prototype = {
 	}
 	,createProperties: function() {
 	}
-    ,create: async function() {
-        var vertResp = await fetch(_this._vertSourceLoc);
-        var fragResp = await fetch(_this._fragSourceLoc);
-        this._vertSource = await vertResp.text();
-        this._fragSource = await fragResp.text();
-	    this.compile(this._vertSource,this._fragSource);
+	,create: function() {
+		this.compile(this._vertSource,this._fragSource);
 		this._ready = true;
 	}
 	,destroy: function() {
