@@ -1,0 +1,6 @@
+--macro snow.Set.main("Main")
+--macro snow.Set.ident("com.haxiomic.gpufluid")
+
+--macro snow.Set.config("config.json")
+
+
