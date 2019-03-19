@@ -1,0 +1,15 @@
+root = true
+
+[*]
+end_of_line = lf
+charset = utf-8
+indent_style = space
+indent_size = 4
+
+[*.{html,css,scss}]
+indent_style = space
+indent_size = 4
+
+[*.{php,js,json,babelrc}]
+indent_style = space
+indent_size = 4
