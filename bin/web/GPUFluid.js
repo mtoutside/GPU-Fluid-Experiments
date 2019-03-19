@@ -2095,6 +2095,8 @@ RenderParticles.prototype = $extend(shaderblox_ShaderBase.prototype,{
 	}
 	,__class__: RenderParticles
 });
+
+/* ----------------------------------------------------------------------------------- */
 var HxOverrides = function() { };
 $hxClasses["HxOverrides"] = HxOverrides;
 HxOverrides.__name__ = ["HxOverrides"];
@@ -2283,10 +2285,10 @@ snow_App.prototype = {
 	}
 	,ontickend: function() {
 	}
-	,onkeydown: function(keycode,scancode,repeat,mod,timestamp,window_id) {
+	/*,onkeydown: function(keycode,scancode,repeat,mod,timestamp,window_id) {
 	}
 	,onkeyup: function(keycode,scancode,repeat,mod,timestamp,window_id) {
-	}
+	}*/
 	,ontextinput: function(text,start,length,type,timestamp,window_id) {
 	}
 	,onmousedown: function(x,y,button,timestamp,window_id) {
@@ -7687,81 +7689,6 @@ snow_core_web_Runtime.prototype = {
 			this.app.dispatch_window_event(9,window.performance.now() / 1000.0 - snow_core_web_Runtime.timestamp_start,1,null,null);
 			this.app.dispatch_window_event(12,window.performance.now() / 1000.0 - snow_core_web_Runtime.timestamp_start,1,null,null);
 		}
-	}
-	,on_keydown: function(_ev) {
-		var dom_keycode = _ev.keyCode;
-		var _keycode = dom_keycode >= 65 && dom_keycode <= 90 ? dom_keycode + 32 : snow_core_web__$Runtime_DOMKeys.dom_key_to_keycode(dom_keycode);
-		var _scancode = snow_systems_input_Keycodes.to_scan(_keycode);
-		var _none = !_ev.altKey && !_ev.ctrlKey && !_ev.metaKey && !_ev.shiftKey;
-		this.app.input.mod_state.none = _none;
-		this.app.input.mod_state.lshift = _ev.shiftKey;
-		this.app.input.mod_state.rshift = _ev.shiftKey;
-		this.app.input.mod_state.lctrl = _ev.ctrlKey;
-		this.app.input.mod_state.rctrl = _ev.ctrlKey;
-		this.app.input.mod_state.lalt = _ev.altKey;
-		this.app.input.mod_state.ralt = _ev.altKey;
-		this.app.input.mod_state.lmeta = _ev.metaKey;
-		this.app.input.mod_state.rmeta = _ev.metaKey;
-		this.app.input.mod_state.num = false;
-		this.app.input.mod_state.caps = false;
-		this.app.input.mod_state.mode = false;
-		this.app.input.mod_state.ctrl = _ev.ctrlKey;
-		this.app.input.mod_state.shift = _ev.shiftKey;
-		this.app.input.mod_state.alt = _ev.altKey;
-		this.app.input.mod_state.meta = _ev.metaKey;
-		var _mod_state = this.app.input.mod_state;
-		if(this.app.config.runtime.prevent_default_keys.indexOf(_keycode) != -1) {
-			_ev.preventDefault();
-		}
-		this.app.input.dispatch_key_down_event(_keycode,_scancode,_ev.repeat,_mod_state,window.performance.now() / 1000.0 - snow_core_web_Runtime.timestamp_start,1);
-	}
-	,on_keyup: function(_ev) {
-		var dom_keycode = _ev.keyCode;
-		var _keycode = dom_keycode >= 65 && dom_keycode <= 90 ? dom_keycode + 32 : snow_core_web__$Runtime_DOMKeys.dom_key_to_keycode(dom_keycode);
-		var _scancode = snow_systems_input_Keycodes.to_scan(_keycode);
-		var _none = !_ev.altKey && !_ev.ctrlKey && !_ev.metaKey && !_ev.shiftKey;
-		this.app.input.mod_state.none = _none;
-		this.app.input.mod_state.lshift = _ev.shiftKey;
-		this.app.input.mod_state.rshift = _ev.shiftKey;
-		this.app.input.mod_state.lctrl = _ev.ctrlKey;
-		this.app.input.mod_state.rctrl = _ev.ctrlKey;
-		this.app.input.mod_state.lalt = _ev.altKey;
-		this.app.input.mod_state.ralt = _ev.altKey;
-		this.app.input.mod_state.lmeta = _ev.metaKey;
-		this.app.input.mod_state.rmeta = _ev.metaKey;
-		this.app.input.mod_state.num = false;
-		this.app.input.mod_state.caps = false;
-		this.app.input.mod_state.mode = false;
-		this.app.input.mod_state.ctrl = _ev.ctrlKey;
-		this.app.input.mod_state.shift = _ev.shiftKey;
-		this.app.input.mod_state.alt = _ev.altKey;
-		this.app.input.mod_state.meta = _ev.metaKey;
-		var _mod_state = this.app.input.mod_state;
-		if(this.app.config.runtime.prevent_default_keys.indexOf(_keycode) != -1) {
-			_ev.preventDefault();
-		}
-		this.app.input.dispatch_key_up_event(_keycode,_scancode,_ev.repeat,_mod_state,window.performance.now() / 1000.0 - snow_core_web_Runtime.timestamp_start,1);
-	}
-	,on_keypress: function(_ev) {
-		if(_ev.which != 0 && snow_core_web_Runtime.key_press_ignored.indexOf(_ev.keyCode) == -1) {
-			var _text = String.fromCharCode(_ev.charCode);
-			this.app.input.dispatch_text_event(_text,0,_text.length,2,window.performance.now() / 1000.0 - snow_core_web_Runtime.timestamp_start,1);
-		}
-	}
-	,on_gamepadconnected: function(_ev) {
-		var _gamepad = _ev.gamepad;
-		this.gamepad_btns_cache[_gamepad.index] = [];
-		var _g1 = 0;
-		var _g = _gamepad.buttons.length;
-		while(_g1 < _g) {
-			var i = _g1++;
-			this.gamepad_btns_cache[_gamepad.index].push(0);
-		}
-		this.app.input.dispatch_gamepad_device_event(_ev.gamepad.index,_ev.gamepad.id,1,window.performance.now() / 1000.0 - snow_core_web_Runtime.timestamp_start);
-	}
-	,on_gamepaddisconnected: function(_ev) {
-		this.gamepad_btns_cache[_ev.gamepad.index] = null;
-		this.app.input.dispatch_gamepad_device_event(_ev.gamepad.index,_ev.gamepad.id,2,window.performance.now() / 1000.0 - snow_core_web_Runtime.timestamp_start);
 	}
 	,create_window: function() {
 		var config = this.app.config.window;
