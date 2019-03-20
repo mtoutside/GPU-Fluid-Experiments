@@ -4189,7 +4189,7 @@ gltoolbox_render_RenderTarget2Phase.prototype = {
 		var newWriteToTexture = this.textureFactory(width,height);
 		var newReadFromTexture = this.textureFactory(width,height);
 		snow_modules_opengl_web_GL.gl.bindFramebuffer(36160,this.writeFrameBufferObject);
-		snow_modules_opengl_web_GL.gl.framebufferTexture2D(36160,36064,3553,newWriteToTexture,0);
+	        snow_modules_opengl_web_GL.gl.framebufferTexture2D(36160,36064,3553,newWriteToTexture,0);
 		snow_modules_opengl_web_GL.gl.bindFramebuffer(36160,this.readFrameBufferObject);
 		snow_modules_opengl_web_GL.gl.framebufferTexture2D(36160,36064,3553,newReadFromTexture,0);
 		if(this.readFromTexture != null) {
