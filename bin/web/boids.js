@@ -1,13 +1,27 @@
 
 let sketch = function(s) {
+    window.s = s;
 	let flock;
+    let gl = snow_modules_opengl_web_GL.gl; 
 
-	s.setup = function() {
-		s.createCanvas(innerWidth, innerHeight);
+    s.setup = function() {
+				s.createCanvas(innerWidth, innerHeight);
 
+				var cv = document.getElementById("defaultCanvas0");
+				cv.style.width="auto";
+				cv.style.height ="auto";
+				
+        var swapFragShader = async function swapFragShader (shader, shaderLoc) {
+            var resp = await fetch(shaderLoc);
+            shader._fragSource = await resp.text();
+            console.log(shader._fragSource);
+            shader.create();
+        };
+
+        swapFragShader(gpu_fluid_main.fluid.applyForcesShader, "/shaders/glsl/mouseforce.frag.glsl");
 		flock = new Flock();
 		// Add an initial set of boids into the system
-		for (let i = 0; i < 100; i++) {
+		for (let i = 0; i < 20; i++) {
 			let b = new Boid(s.width / 2,s.height / 2);
 			flock.addBoid(b);
 		}
@@ -52,8 +66,20 @@ let sketch = function(s) {
 	// Boid class
 	// Methods for Separation, Cohesion, Alignment added
 
-	Boid = function(x, y) {
+     readVelocityAt = function (x, y) {
+        var pixel = new Float32Array(4); //1pxの情報を格納する配列 RGBAだから4. 
+        var velocityFBO = gpu_fluid_main.fluid.velocityRenderTarget.writeFrameBufferObject;
+
+        gl.bindFramebuffer(gl.FRAMEBUFFER, velocityFBO);   //velocityFBOをcurrentに
+        gl.readPixels(x,y,1,1,gl.RGBA, gl.FLOAT, pixel); //pixelに読み込む
+        gl.bindFramebuffer(gl.FRAMEBUFFER, null);          //FBOを戻す
+
+        return s.createVector( pixel[0], pixel[1] )
+    }
+
+    Boid = function(x, y) {
 		this.acceleration = s.createVector(0, 0);
+		// this.velocity = s.createVector(s.random(-1, 1), s.random(-1, 1));
 		this.velocity = s.createVector(s.random(-1, 1), s.random(-1, 1));
 		this.position = s.createVector(x, y);
 		this.r = 3.0;
@@ -92,8 +118,12 @@ let sketch = function(s) {
 	Boid.prototype.update = function() {
 		// Update velocity
 		this.velocity.add(this.acceleration);
+		this.velocity.set(0,0);
+			var v = readVelocityAt(this.position.x, this.position.y);
+			v.mult(0.05);
+			this.velocity.set(v.x,v.y);
 		// Limit speed
-		this.velocity.limit(this.maxspeed);
+		//this.velocity.limit(this.maxspeed);
 		this.position.add(this.velocity);
 		// Reset accelertion to 0 each cycle
 		this.acceleration.mult(0);
@@ -218,4 +248,6 @@ let sketch = function(s) {
 	}
 }
 
-const boidsSketch = new p5(sketch);
+setTimeout(function() {
+    const boidsSketch = new p5(sketch);
+}, 2000);
