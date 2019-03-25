@@ -1,4 +1,3 @@
-
 let sketch = function(s) {
     window.s = s;
 	let flock;
@@ -14,11 +13,11 @@ let sketch = function(s) {
 		let swapFragShader = async function swapFragShader (shader, shaderLoc) {
 				let resp = await fetch(shaderLoc);
 				shader._fragSource = await resp.text();
-				console.log(shader._fragSource);
+				// console.log(shader._fragSource);
 				shader.create();
 		};
-
 		swapFragShader(gpu_fluid_main.fluid.applyForcesShader, "/shaders/glsl/mouseforce.frag.glsl");
+
 		flock = new Flock();
 		// Add an initial set of boids into the system
 		for (let i = 0; i < 50; i++) {
@@ -66,19 +65,19 @@ let sketch = function(s) {
 	// Boid class
 	// Methods for Separation, Cohesion, Alignment added
 
-		// connecting GPU
-		readVelocityAt = function (x, y) {
-			let pixel = new Float32Array(4); //1pxの情報を格納する配列 RGBAだから4. 
-			let velocityFBO = gpu_fluid_main.fluid.velocityRenderTarget.writeFrameBufferObject;
+	// connecting GPU
+	readVelocityAt = function (x, y) {
+		let pixel = new Float32Array(4); //1pxの情報を格納する配列 RGBAだから4. 
+		let velocityFBO = gpu_fluid_main.fluid.velocityRenderTarget.writeFrameBufferObject;
 
-			gl.bindFramebuffer(gl.FRAMEBUFFER, velocityFBO);   //velocityFBOをcurrentに
-			gl.readPixels(x,y,1,1,gl.RGBA, gl.FLOAT, pixel); //pixelに読み込む
-			gl.bindFramebuffer(gl.FRAMEBUFFER, null);          //FBOを戻す
+		gl.bindFramebuffer(gl.FRAMEBUFFER, velocityFBO);   //velocityFBOをcurrentに
+		gl.readPixels(x,y,1,1,gl.RGBA, gl.FLOAT, pixel); //pixelに読み込む
+		gl.bindFramebuffer(gl.FRAMEBUFFER, null);          //FBOを戻す
 
-			return s.createVector( pixel[0], pixel[1] )
-    }
+		return s.createVector( pixel[0], pixel[1] )
+	}
 
-    Boid = function(x, y) {
+	Boid = function(x, y) {
 		this.acceleration = s.createVector(0, 0);
 		this.velocity = s.createVector(s.random(-1, 1), s.random(-1, 1));
 		this.position = s.createVector(x, y);
@@ -104,6 +103,7 @@ let sketch = function(s) {
 		let sep = this.separate(boids);   // Separation
 		let ali = this.align(boids);      // Alignment
 		let coh = this.cohesion(boids);   // Cohesion
+		let app = this.applyVelocity(boids);   // applyVelocity
 		// Arbitrarily weight these forces
 		sep.mult(1.5);
 		ali.mult(1.0);
@@ -112,16 +112,43 @@ let sketch = function(s) {
 		this.applyForce(sep);
 		this.applyForce(ali);
 		this.applyForce(coh);
+
+		//Add velo
+		this.applyForce(app);
+	}
+
+	//apply velocity?
+	Boid.prototype.applyVelocity = function(boids) {
+		let neighbordist = 50;
+		let sum = s.createVector(0,0);
+		let count = 0;
+		let v = readVelocityAt(this.position.x, this.position.y);
+		// console.log(v);
+		for (let i = 0; i < boids.length; i++) {
+			let d = p5.Vector.dist(this.position,boids[i].position);
+			if ((d > 0) && (d < neighbordist)) {
+				sum.add(boids[i].velocity);
+				v.normalize();
+				p5.Vector.add(sum, v);
+				count++;
+			}
+		}
+		if (count > 0) {
+			sum.div(count);
+			sum.normalize();
+			sum.mult(this.maxspeed);
+			let steer = p5.Vector.sub(sum, this.velocity);
+			steer.limit(this.maxforce);
+			return steer;
+		} else {
+			return s.createVector(0, 0);
+		}
 	}
 
 	// Method to update location
 	Boid.prototype.update = function() {
 		// Update velocity
 		this.velocity.add(this.acceleration);
-		// this.velocity.set(0,0);
-		// let v = readVelocityAt(this.position.x, this.position.y);
-		// v.mult(1.5);
-		// this.velocity.add(v.x,v.y);
 		// Limit speed
 		this.velocity.limit(this.maxspeed);
 		this.position.add(this.velocity);
@@ -234,11 +261,11 @@ let sketch = function(s) {
 		let count = 0;
 		for (let i = 0; i < boids.length; i++) {
 			let d = p5.Vector.dist(this.position,boids[i].position);
-			if ((d > 0) && (d < neighbordist)) {
-				sum.add(s.mouseX, s.mouseY);  // Chaseing mouse
-				// sum.add(boids[i].position); // Add location
+			// if ((d > 0) && (d < neighbordist)) {
+				// sum.add(s.mouseX, s.mouseY);  // Chaseing mouse
+				sum.add(boids[i].position); // Add location
 				count++;
-			}
+			// }
 		}
 		if (count > 0) {
 			sum.div(count);
@@ -248,6 +275,7 @@ let sketch = function(s) {
 		}
 	}
 }
+
 
 setTimeout(function() {
     const boidsSketch = new p5(sketch);
