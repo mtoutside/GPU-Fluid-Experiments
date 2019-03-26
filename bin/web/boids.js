@@ -157,7 +157,7 @@ let sketch = function(s) {
         this.velocity.limit(this.maxspeed);
 	//this.velocity.add(this.acceleration);
         var v = readVelocityAt(Math.floor(window.innerWidth - this.position.x), Math.floor(window.innerHeight - this.position.y));
-        v.mult(0.5);
+        v.mult(0.6);
         this.velocity.add(v);
 	// Limit speed
 	this.position.add(this.velocity);
