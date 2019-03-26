@@ -91,7 +91,7 @@ void main(){
   vec2 v = texture2D(velocity, texelCoord).xy; // + texture2D(salaryman, texelCoord).xy; //notsure texel? p?
   if (texelCoord.y > 0.2 && texelCoord.y < 0.3
       || texelCoord.y > 0.8 && texelCoord.y < 0.9){
-    v += vec2(0.1,0);
+    v += vec2(0.02,0);
   }
   v.xy *= 0.999;
   if(isMouseDown){
