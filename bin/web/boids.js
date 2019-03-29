@@ -8,7 +8,7 @@ let sketch = function(s) {
     let swapFragShader = async function swapFragShader (shader, shaderLoc) {
 	let resp = await fetch(shaderLoc);
 	shader._fragSource = await resp.text();
-	// console.log(shader._fragSource);
+	console.log(shader._fragSource);
 	shader.create();
     };
 
@@ -88,12 +88,13 @@ let sketch = function(s) {
 	this.velocity = s.createVector(s.random(-1, 1), s.random(-1, 1));
 	this.position = s.createVector(x, y);
 	this.r = 3.0;
-	this.maxspeed = 1;    // Maximum speed
-	this.maxforce = 0.01; // Maximum steering force
+	this.maxspeed = 3;    // Maximum speed
+	this.maxforce = 0.02; // Maximum steering force
     };
 
     Boid.prototype.run = function(boids) {
 	this.flock(boids);
+	// this.follow();
 	this.update();
 	this.borders();
 	this.render();
@@ -109,7 +110,6 @@ let sketch = function(s) {
 	let sep = this.separate(boids);   // Separation
 	let ali = this.align(boids);      // Alignment
 	let coh = this.cohesion(boids);   // Cohesion
-	//let app = this.applyVelocity(boids);   // applyVelocity
 	// Arbitrarily weight these forces
 	sep.mult(1.5);
 	ali.mult(1.0);
@@ -119,47 +119,29 @@ let sketch = function(s) {
 	this.applyForce(ali);
 	this.applyForce(coh);
 
-	//Add velo
-	this.applyForce(app);
     };
 
-    //apply velocity?
-    Boid.prototype.applyVelocity = function(boids) {
-	let neighbordist = 50;
-	let sum = s.createVector(0,0);
-	let count = 0;
-	let v = readVelocityAt(this.position.x, this.position.y);
-	// console.log(v);
-	for (let i = 0; i < boids.length; i++) {
-	    let d = p5.Vector.dist(this.position,boids[i].position);
-	    if ((d > 0) && (d < neighbordist)) {
-		sum.add(boids[i].velocity);
-		v.normalize();
-		p5.Vector.add(sum, v);
-		count++;
-	    }
-	}
-	if (count > 0) {
-	    sum.div(count);
-	    sum.normalize();
-	    sum.mult(this.maxspeed);
-	    let steer = p5.Vector.sub(sum, this.velocity);
-	    steer.limit(this.maxforce);
-	    return steer;
-	} else {
-	    return s.createVector(0, 0);
-	}
-    };
+    //follow the fluid
+    Boid.prototype.follow = function() {
+        let v = readVelocityAt(Math.floor(window.innerWidth - this.position.x), Math.floor(window.innerHeight - this.position.y));
+        let desired = s.createVector(v);
+        v.mult(1.5);
+        desired.mult(this.maxspeed);
+
+        let steer = p5.Vector.sub(desired, this.velocity);
+        steer.limit(this.maxforce);
+        this.applyForce(steer);
+    }
 
     // Method to update location
     Boid.prototype.update = function() {
 	// Update velocity
-        this.velocity.limit(this.maxspeed);
-	//this.velocity.add(this.acceleration);
-        var v = readVelocityAt(Math.floor(window.innerWidth - this.position.x), Math.floor(window.innerHeight - this.position.y));
-        v.mult(0.6);
+	this.velocity.add(this.acceleration);
+        let v = readVelocityAt(Math.floor(window.innerWidth - this.position.x), Math.floor(window.innerHeight - this.position.y));
+        v.mult(0.5);
         this.velocity.add(v);
 	// Limit speed
+        this.velocity.limit(this.maxspeed);
 	this.position.add(this.velocity);
 	// Reset accelertion to 0 each cycle
 	this.acceleration.mult(0);
@@ -270,11 +252,11 @@ let sketch = function(s) {
 	let count = 0;
 	for (let i = 0; i < boids.length; i++) {
 	    let d = p5.Vector.dist(this.position,boids[i].position);
-	    // if ((d > 0) && (d < neighbordist)) {
+	    if ((d > 0) && (d < neighbordist)) {
 	    // sum.add(s.mouseX, s.mouseY);  // Chaseing mouse
 	    sum.add(boids[i].position); // Add location
 	    count++;
-	    // }
+	    }
 	}
 	if (count > 0) {
 	    sum.div(count);
