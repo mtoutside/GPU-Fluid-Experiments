@@ -716,8 +716,86 @@ FluidBase.prototype = $extend(shaderblox_ShaderBase.prototype,{
 		this._aStride += 8;
 	}
 	,initSources: function() {
-		this._vertSource = "\r\n#ifdef GL_ES\r\nprecision highp float;\r\nprecision highp sampler2D;\r\n#endif\n\n\r\nattribute vec2 vertexPosition;\r\n\r\nuniform float aspectRatio;\r\n\r\nvarying vec2 texelCoord;\r\n\r\n\r\nvarying vec2 p;\r\n\r\nvoid main() {\r\n\ttexelCoord = vertexPosition;\r\n\t\r\n\tvec2 clipSpace = 2.0*texelCoord - 1.0;\t\r\n\t\r\n\tp = vec2(clipSpace.x * aspectRatio, clipSpace.y);\r\n\r\n\tgl_Position = vec4(clipSpace, 0.0, 1.0 );\t\r\n}\r\n\n";
-		this._fragSource = "\r\n#ifdef GL_ES\r\nprecision highp float;\r\nprecision highp sampler2D;\r\n#endif\n\n\r\n\r\n#define PRESSURE_BOUNDARY\r\n#define VELOCITY_BOUNDARY\r\n\r\nuniform vec2 invresolution;\r\nuniform float aspectRatio;\r\n\r\nvec2 clipToAspectSpace(vec2 p){\r\n    return vec2(p.x * aspectRatio, p.y);\r\n}\r\n\r\nvec2 aspectToTexelSpace(vec2 p){\r\n    return vec2(p.x / aspectRatio + 1.0 , p.y + 1.0)*.5;\r\n}\r\n\r\n\r\nfloat samplePressue(sampler2D pressure, vec2 coord){\r\n    vec2 cellOffset = vec2(0.0, 0.0);\r\n\r\n    \r\n    \r\n    \r\n    #ifdef PRESSURE_BOUNDARY\r\n    if(coord.x < 0.0)      cellOffset.x = 1.0;\r\n    else if(coord.x > 1.0) cellOffset.x = -1.0;\r\n    if(coord.y < 0.0)      cellOffset.y = 1.0;\r\n    else if(coord.y > 1.0) cellOffset.y = -1.0;\r\n    #endif\r\n\r\n    return texture2D(pressure, coord + cellOffset * invresolution).x;\r\n}\r\n\r\n\r\nvec2 sampleVelocity(sampler2D velocity, vec2 coord){\r\n    vec2 cellOffset = vec2(0.0, 0.0);\r\n    vec2 multiplier = vec2(1.0, 1.0);\r\n\r\n    \r\n    \r\n    \r\n    #ifdef VELOCITY_BOUNDARY\r\n    if(coord.x<0.0){\r\n        cellOffset.x = 1.0;\r\n        multiplier.x = -1.0;\r\n    }else if(coord.x>1.0){\r\n        cellOffset.x = -1.0;\r\n        multiplier.x = -1.0;\r\n    }\r\n    if(coord.y<0.0){\r\n        cellOffset.y = 1.0;\r\n        multiplier.y = -1.0;\r\n    }else if(coord.y>1.0){\r\n        cellOffset.y = -1.0;\r\n        multiplier.y = -1.0;\r\n    }\r\n    #endif\r\n\r\n    return multiplier * texture2D(velocity, coord + cellOffset * invresolution).xy;\r\n}\n";
+		this._vertSource = `
+		#ifdef GL_ES
+		precision highp float;
+		precision highp sampler2D;
+		#endif
+		
+		attribute vec2 vertexPosition;
+		uniform float aspectRatio;
+		varying vec2 texelCoord;
+		varying vec2 p;
+		void main() {
+			texelCoord = vertexPosition;
+			vec2 clipSpace = 2.0*texelCoord - 1.0;
+			p = vec2(clipSpace.x * aspectRatio, clipSpace.y);
+			gl_Position = vec4(clipSpace, 0.0, 1.0 );
+		}`;
+		this._fragSource = `
+		#ifdef GL_ES
+		precision highp float;
+		precision highp sampler2D;
+		#endif
+		
+		#define PRESSURE_BOUNDARY
+	#define VELOCITY_BOUNDARY
+
+	uniform vec2 invresolution;
+	uniform float aspectRatio;
+
+	vec2 clipToAspectSpace(vec2 p){
+			return vec2(p.x * aspectRatio, p.y);
+	}
+
+	vec2 aspectToTexelSpace(vec2 p){
+			return vec2(p.x / aspectRatio + 1.0 , p.y + 1.0)*.5;
+	}
+
+	//sampling pressure texture factoring in boundary conditions
+	float samplePressue(sampler2D pressure, vec2 coord){
+			vec2 cellOffset = vec2(0.0, 0.0);
+
+			//pure Neumann boundary conditions: 0 pressure gradient across the boundary
+			//dP/dx = 0
+			//walls
+			#ifdef PRESSURE_BOUNDARY
+			if(coord.x < 0.0)      cellOffset.x = 1.0;
+			else if(coord.x > 1.0) cellOffset.x = -1.0;
+			if(coord.y < 0.0)      cellOffset.y = 1.0;
+			else if(coord.y > 1.0) cellOffset.y = -1.0;
+			#endif
+
+			return texture2D(pressure, coord + cellOffset * invresolution).x;
+	}
+
+	//sampling velocity texture factoring in boundary conditions
+	vec2 sampleVelocity(sampler2D velocity, vec2 coord){
+			vec2 cellOffset = vec2(0.0, 0.0);
+			vec2 multiplier = vec2(1.0, 1.0);
+
+			//free-slip boundary: the average flow across the boundary is restricted to 0
+			//avg(uA.xy, uB.xy) dot (boundary normal).xy = 0
+			//walls
+			#ifdef VELOCITY_BOUNDARY
+			if(coord.x<0.0){
+					cellOffset.x = 1.0;
+					multiplier.x = -1.0;
+			}else if(coord.x>1.0){
+					cellOffset.x = -1.0;
+					multiplier.x = -1.0;
+			}
+			if(coord.y<0.0){
+					cellOffset.y = 1.0;
+					multiplier.y = -1.0;
+			}else if(coord.y>1.0){
+					cellOffset.y = -1.0;
+					multiplier.y = -1.0;
+			}
+			#endif
+
+			return multiplier * texture2D(velocity, coord + cellOffset * invresolution).xy;
+		}`;
 	}
 	,__class__: FluidBase
 });
@@ -745,8 +823,118 @@ Advect.prototype = $extend(FluidBase.prototype,{
 		this._aStride += 0;
 	}
 	,initSources: function() {
-		this._vertSource = "\r\n#ifdef GL_ES\r\nprecision highp float;\r\nprecision highp sampler2D;\r\n#endif\n\n\r\nattribute vec2 vertexPosition;\r\n\r\nuniform float aspectRatio;\r\n\r\nvarying vec2 texelCoord;\r\n\r\n\r\nvarying vec2 p;\r\n\r\nvoid main() {\r\n\ttexelCoord = vertexPosition;\r\n\t\r\n\tvec2 clipSpace = 2.0*texelCoord - 1.0;\t\r\n\t\r\n\tp = vec2(clipSpace.x * aspectRatio, clipSpace.y);\r\n\r\n\tgl_Position = vec4(clipSpace, 0.0, 1.0 );\t\r\n}\r\n\n\n\n";
-		this._fragSource = "\r\n#ifdef GL_ES\r\nprecision highp float;\r\nprecision highp sampler2D;\r\n#endif\n\n\r\n\r\n#define PRESSURE_BOUNDARY\r\n#define VELOCITY_BOUNDARY\r\n\r\nuniform vec2 invresolution;\r\nuniform float aspectRatio;\r\n\r\nvec2 clipToAspectSpace(vec2 p){\r\n    return vec2(p.x * aspectRatio, p.y);\r\n}\r\n\r\nvec2 aspectToTexelSpace(vec2 p){\r\n    return vec2(p.x / aspectRatio + 1.0 , p.y + 1.0)*.5;\r\n}\r\n\r\n\r\nfloat samplePressue(sampler2D pressure, vec2 coord){\r\n    vec2 cellOffset = vec2(0.0, 0.0);\r\n\r\n    \r\n    \r\n    \r\n    #ifdef PRESSURE_BOUNDARY\r\n    if(coord.x < 0.0)      cellOffset.x = 1.0;\r\n    else if(coord.x > 1.0) cellOffset.x = -1.0;\r\n    if(coord.y < 0.0)      cellOffset.y = 1.0;\r\n    else if(coord.y > 1.0) cellOffset.y = -1.0;\r\n    #endif\r\n\r\n    return texture2D(pressure, coord + cellOffset * invresolution).x;\r\n}\r\n\r\n\r\nvec2 sampleVelocity(sampler2D velocity, vec2 coord){\r\n    vec2 cellOffset = vec2(0.0, 0.0);\r\n    vec2 multiplier = vec2(1.0, 1.0);\r\n\r\n    \r\n    \r\n    \r\n    #ifdef VELOCITY_BOUNDARY\r\n    if(coord.x<0.0){\r\n        cellOffset.x = 1.0;\r\n        multiplier.x = -1.0;\r\n    }else if(coord.x>1.0){\r\n        cellOffset.x = -1.0;\r\n        multiplier.x = -1.0;\r\n    }\r\n    if(coord.y<0.0){\r\n        cellOffset.y = 1.0;\r\n        multiplier.y = -1.0;\r\n    }else if(coord.y>1.0){\r\n        cellOffset.y = -1.0;\r\n        multiplier.y = -1.0;\r\n    }\r\n    #endif\r\n\r\n    return multiplier * texture2D(velocity, coord + cellOffset * invresolution).xy;\r\n}\n\nuniform sampler2D velocity;\r\nuniform sampler2D target;\r\nuniform float dt;\r\nuniform float rdx; \r\n\r\nvarying vec2 texelCoord;\r\nvarying vec2 p;\r\n\r\nvoid main(void){\r\n  \r\n  \r\n  vec2 tracedPos = p - dt * rdx * texture2D(velocity, texelCoord ).xy; \r\n\r\n  \r\n  \r\n  tracedPos = aspectToTexelSpace(tracedPos);\r\n\r\n  gl_FragColor = texture2D(target, tracedPos);\r\n}\n";
+		this._vertSource = `
+		#ifdef GL_ES
+precision highp float;
+precision highp sampler2D;
+#endif
+
+
+attribute vec2 vertexPosition;
+
+uniform float aspectRatio;
+
+varying vec2 texelCoord;
+
+
+varying vec2 p;
+
+void main() {
+	texelCoord = vertexPosition;
+	
+	vec2 clipSpace = 2.0*texelCoord - 1.0;	
+	
+	p = vec2(clipSpace.x * aspectRatio, clipSpace.y);
+
+	gl_Position = vec4(clipSpace, 0.0, 1.0 );	
+}
+`;
+		this._fragSource = `
+		#ifdef GL_ES
+precision highp float;
+precision highp sampler2D;
+#endif
+
+
+
+#define PRESSURE_BOUNDARY
+#define VELOCITY_BOUNDARY
+
+uniform vec2 invresolution;
+uniform float aspectRatio;
+
+vec2 clipToAspectSpace(vec2 p){
+    return vec2(p.x * aspectRatio, p.y);
+}
+
+vec2 aspectToTexelSpace(vec2 p){
+    return vec2(p.x / aspectRatio + 1.0 , p.y + 1.0)*.5;
+}
+
+
+float samplePressue(sampler2D pressure, vec2 coord){
+    vec2 cellOffset = vec2(0.0, 0.0);
+
+    
+    
+    
+    #ifdef PRESSURE_BOUNDARY
+    if(coord.x < 0.0)      cellOffset.x = 1.0;
+    else if(coord.x > 1.0) cellOffset.x = -1.0;
+    if(coord.y < 0.0)      cellOffset.y = 1.0;
+    else if(coord.y > 1.0) cellOffset.y = -1.0;
+    #endif
+
+    return texture2D(pressure, coord + cellOffset * invresolution).x;
+}
+
+
+vec2 sampleVelocity(sampler2D velocity, vec2 coord){
+    vec2 cellOffset = vec2(0.0, 0.0);
+    vec2 multiplier = vec2(1.0, 1.0);
+
+    
+    
+    
+    #ifdef VELOCITY_BOUNDARY
+    if(coord.x<0.0){
+        cellOffset.x = 1.0;
+        multiplier.x = -1.0;
+    }else if(coord.x>1.0){
+        cellOffset.x = -1.0;
+        multiplier.x = -1.0;
+    }
+    if(coord.y<0.0){
+        cellOffset.y = 1.0;
+        multiplier.y = -1.0;
+    }else if(coord.y>1.0){
+        cellOffset.y = -1.0;
+        multiplier.y = -1.0;
+    }
+    #endif
+
+    return multiplier * texture2D(velocity, coord + cellOffset * invresolution).xy;
+}
+
+uniform sampler2D velocity;
+uniform sampler2D target;
+uniform float dt;
+uniform float rdx; 
+
+varying vec2 texelCoord;
+varying vec2 p;
+
+void main(void){
+  
+  
+  vec2 tracedPos = p - dt * rdx * texture2D(velocity, texelCoord ).xy; 
+
+  
+  
+  tracedPos = aspectToTexelSpace(tracedPos);
+
+  gl_FragColor = texture2D(target, tracedPos);
+}`;
 	}
 	,__class__: Advect
 });
@@ -768,8 +956,114 @@ Divergence.prototype = $extend(FluidBase.prototype,{
 		this._aStride += 0;
 	}
 	,initSources: function() {
-		this._vertSource = "\r\n#ifdef GL_ES\r\nprecision highp float;\r\nprecision highp sampler2D;\r\n#endif\n\n\r\nattribute vec2 vertexPosition;\r\n\r\nuniform float aspectRatio;\r\n\r\nvarying vec2 texelCoord;\r\n\r\n\r\nvarying vec2 p;\r\n\r\nvoid main() {\r\n\ttexelCoord = vertexPosition;\r\n\t\r\n\tvec2 clipSpace = 2.0*texelCoord - 1.0;\t\r\n\t\r\n\tp = vec2(clipSpace.x * aspectRatio, clipSpace.y);\r\n\r\n\tgl_Position = vec4(clipSpace, 0.0, 1.0 );\t\r\n}\r\n\n\n\n";
-		this._fragSource = "\r\n#ifdef GL_ES\r\nprecision highp float;\r\nprecision highp sampler2D;\r\n#endif\n\n\r\n\r\n#define PRESSURE_BOUNDARY\r\n#define VELOCITY_BOUNDARY\r\n\r\nuniform vec2 invresolution;\r\nuniform float aspectRatio;\r\n\r\nvec2 clipToAspectSpace(vec2 p){\r\n    return vec2(p.x * aspectRatio, p.y);\r\n}\r\n\r\nvec2 aspectToTexelSpace(vec2 p){\r\n    return vec2(p.x / aspectRatio + 1.0 , p.y + 1.0)*.5;\r\n}\r\n\r\n\r\nfloat samplePressue(sampler2D pressure, vec2 coord){\r\n    vec2 cellOffset = vec2(0.0, 0.0);\r\n\r\n    \r\n    \r\n    \r\n    #ifdef PRESSURE_BOUNDARY\r\n    if(coord.x < 0.0)      cellOffset.x = 1.0;\r\n    else if(coord.x > 1.0) cellOffset.x = -1.0;\r\n    if(coord.y < 0.0)      cellOffset.y = 1.0;\r\n    else if(coord.y > 1.0) cellOffset.y = -1.0;\r\n    #endif\r\n\r\n    return texture2D(pressure, coord + cellOffset * invresolution).x;\r\n}\r\n\r\n\r\nvec2 sampleVelocity(sampler2D velocity, vec2 coord){\r\n    vec2 cellOffset = vec2(0.0, 0.0);\r\n    vec2 multiplier = vec2(1.0, 1.0);\r\n\r\n    \r\n    \r\n    \r\n    #ifdef VELOCITY_BOUNDARY\r\n    if(coord.x<0.0){\r\n        cellOffset.x = 1.0;\r\n        multiplier.x = -1.0;\r\n    }else if(coord.x>1.0){\r\n        cellOffset.x = -1.0;\r\n        multiplier.x = -1.0;\r\n    }\r\n    if(coord.y<0.0){\r\n        cellOffset.y = 1.0;\r\n        multiplier.y = -1.0;\r\n    }else if(coord.y>1.0){\r\n        cellOffset.y = -1.0;\r\n        multiplier.y = -1.0;\r\n    }\r\n    #endif\r\n\r\n    return multiplier * texture2D(velocity, coord + cellOffset * invresolution).xy;\r\n}\n\nuniform sampler2D velocity;\t\r\nuniform float halfrdx;\t\r\n\r\nvarying vec2 texelCoord;\r\n\r\nvoid main(void){\r\n\t\r\n \t\r\n\tvec2 L = sampleVelocity(velocity, texelCoord - vec2(invresolution.x, 0));\r\n\tvec2 R = sampleVelocity(velocity, texelCoord + vec2(invresolution.x, 0));\r\n\tvec2 B = sampleVelocity(velocity, texelCoord - vec2(0, invresolution.y));\r\n\tvec2 T = sampleVelocity(velocity, texelCoord + vec2(0, invresolution.y));\r\n\r\n\tgl_FragColor = vec4( halfrdx * ((R.x - L.x) + (T.y - B.y)), 0, 0, 1);\r\n}\r\n\n";
+		this._vertSource = `
+		#ifdef GL_ES
+precision highp float;
+precision highp sampler2D;
+#endif
+
+
+attribute vec2 vertexPosition;
+
+uniform float aspectRatio;
+
+varying vec2 texelCoord;
+
+
+varying vec2 p;
+
+void main() {
+	texelCoord = vertexPosition;
+	
+	vec2 clipSpace = 2.0*texelCoord - 1.0;	
+	
+	p = vec2(clipSpace.x * aspectRatio, clipSpace.y);
+
+	gl_Position = vec4(clipSpace, 0.0, 1.0 );	
+}
+`;
+		this._fragSource = `
+		#ifdef GL_ES
+precision highp float;
+precision highp sampler2D;
+#endif
+
+
+
+#define PRESSURE_BOUNDARY
+#define VELOCITY_BOUNDARY
+
+uniform vec2 invresolution;
+uniform float aspectRatio;
+
+vec2 clipToAspectSpace(vec2 p){
+    return vec2(p.x * aspectRatio, p.y);
+}
+
+vec2 aspectToTexelSpace(vec2 p){
+    return vec2(p.x / aspectRatio + 1.0 , p.y + 1.0)*.5;
+}
+
+
+float samplePressue(sampler2D pressure, vec2 coord){
+    vec2 cellOffset = vec2(0.0, 0.0);
+
+    
+    
+    
+    #ifdef PRESSURE_BOUNDARY
+    if(coord.x < 0.0)      cellOffset.x = 1.0;
+    else if(coord.x > 1.0) cellOffset.x = -1.0;
+    if(coord.y < 0.0)      cellOffset.y = 1.0;
+    else if(coord.y > 1.0) cellOffset.y = -1.0;
+    #endif
+
+    return texture2D(pressure, coord + cellOffset * invresolution).x;
+}
+
+
+vec2 sampleVelocity(sampler2D velocity, vec2 coord){
+    vec2 cellOffset = vec2(0.0, 0.0);
+    vec2 multiplier = vec2(1.0, 1.0);
+
+    
+    
+    
+    #ifdef VELOCITY_BOUNDARY
+    if(coord.x<0.0){
+        cellOffset.x = 1.0;
+        multiplier.x = -1.0;
+    }else if(coord.x>1.0){
+        cellOffset.x = -1.0;
+        multiplier.x = -1.0;
+    }
+    if(coord.y<0.0){
+        cellOffset.y = 1.0;
+        multiplier.y = -1.0;
+    }else if(coord.y>1.0){
+        cellOffset.y = -1.0;
+        multiplier.y = -1.0;
+    }
+    #endif
+
+    return multiplier * texture2D(velocity, coord + cellOffset * invresolution).xy;
+}
+
+uniform sampler2D velocity;	
+uniform float halfrdx;	
+
+varying vec2 texelCoord;
+
+void main(void){
+	
+ 	
+	vec2 L = sampleVelocity(velocity, texelCoord - vec2(invresolution.x, 0));
+	vec2 R = sampleVelocity(velocity, texelCoord + vec2(invresolution.x, 0));
+	vec2 B = sampleVelocity(velocity, texelCoord - vec2(0, invresolution.y));
+	vec2 T = sampleVelocity(velocity, texelCoord + vec2(0, invresolution.y));
+
+	gl_FragColor = vec4( halfrdx * ((R.x - L.x) + (T.y - B.y)), 0, 0, 1);
+}`;
 	}
 	,__class__: Divergence
 });
@@ -794,8 +1088,117 @@ PressureSolve.prototype = $extend(FluidBase.prototype,{
 		this._aStride += 0;
 	}
 	,initSources: function() {
-		this._vertSource = "\r\n#ifdef GL_ES\r\nprecision highp float;\r\nprecision highp sampler2D;\r\n#endif\n\n\r\nattribute vec2 vertexPosition;\r\n\r\nuniform float aspectRatio;\r\n\r\nvarying vec2 texelCoord;\r\n\r\n\r\nvarying vec2 p;\r\n\r\nvoid main() {\r\n\ttexelCoord = vertexPosition;\r\n\t\r\n\tvec2 clipSpace = 2.0*texelCoord - 1.0;\t\r\n\t\r\n\tp = vec2(clipSpace.x * aspectRatio, clipSpace.y);\r\n\r\n\tgl_Position = vec4(clipSpace, 0.0, 1.0 );\t\r\n}\r\n\n\n\n";
-		this._fragSource = "\r\n#ifdef GL_ES\r\nprecision highp float;\r\nprecision highp sampler2D;\r\n#endif\n\n\r\n\r\n#define PRESSURE_BOUNDARY\r\n#define VELOCITY_BOUNDARY\r\n\r\nuniform vec2 invresolution;\r\nuniform float aspectRatio;\r\n\r\nvec2 clipToAspectSpace(vec2 p){\r\n    return vec2(p.x * aspectRatio, p.y);\r\n}\r\n\r\nvec2 aspectToTexelSpace(vec2 p){\r\n    return vec2(p.x / aspectRatio + 1.0 , p.y + 1.0)*.5;\r\n}\r\n\r\n\r\nfloat samplePressue(sampler2D pressure, vec2 coord){\r\n    vec2 cellOffset = vec2(0.0, 0.0);\r\n\r\n    \r\n    \r\n    \r\n    #ifdef PRESSURE_BOUNDARY\r\n    if(coord.x < 0.0)      cellOffset.x = 1.0;\r\n    else if(coord.x > 1.0) cellOffset.x = -1.0;\r\n    if(coord.y < 0.0)      cellOffset.y = 1.0;\r\n    else if(coord.y > 1.0) cellOffset.y = -1.0;\r\n    #endif\r\n\r\n    return texture2D(pressure, coord + cellOffset * invresolution).x;\r\n}\r\n\r\n\r\nvec2 sampleVelocity(sampler2D velocity, vec2 coord){\r\n    vec2 cellOffset = vec2(0.0, 0.0);\r\n    vec2 multiplier = vec2(1.0, 1.0);\r\n\r\n    \r\n    \r\n    \r\n    #ifdef VELOCITY_BOUNDARY\r\n    if(coord.x<0.0){\r\n        cellOffset.x = 1.0;\r\n        multiplier.x = -1.0;\r\n    }else if(coord.x>1.0){\r\n        cellOffset.x = -1.0;\r\n        multiplier.x = -1.0;\r\n    }\r\n    if(coord.y<0.0){\r\n        cellOffset.y = 1.0;\r\n        multiplier.y = -1.0;\r\n    }else if(coord.y>1.0){\r\n        cellOffset.y = -1.0;\r\n        multiplier.y = -1.0;\r\n    }\r\n    #endif\r\n\r\n    return multiplier * texture2D(velocity, coord + cellOffset * invresolution).xy;\r\n}\n\nuniform sampler2D pressure;\r\nuniform sampler2D divergence;\r\nuniform float alpha;\r\n\r\nvarying vec2 texelCoord;\r\n\r\nvoid main(void){\r\n  \r\n  \r\n  float L = samplePressue(pressure, texelCoord - vec2(invresolution.x, 0));\r\n  float R = samplePressue(pressure, texelCoord + vec2(invresolution.x, 0));\r\n  float B = samplePressue(pressure, texelCoord - vec2(0, invresolution.y));\r\n  float T = samplePressue(pressure, texelCoord + vec2(0, invresolution.y));\r\n\r\n  float bC = texture2D(divergence, texelCoord).x;\r\n\r\n  gl_FragColor = vec4( (L + R + B + T + alpha * bC) * .25, 0, 0, 1 );\r\n}\n";
+		this._vertSource = `
+		#ifdef GL_ES
+precision highp float;
+precision highp sampler2D;
+#endif
+
+
+attribute vec2 vertexPosition;
+
+uniform float aspectRatio;
+
+varying vec2 texelCoord;
+
+
+varying vec2 p;
+
+void main() {
+	texelCoord = vertexPosition;
+	
+	vec2 clipSpace = 2.0*texelCoord - 1.0;	
+	
+	p = vec2(clipSpace.x * aspectRatio, clipSpace.y);
+
+	gl_Position = vec4(clipSpace, 0.0, 1.0 );	
+}
+`;
+		this._fragSource = `
+		#ifdef GL_ES
+precision highp float;
+precision highp sampler2D;
+#endif
+
+
+
+#define PRESSURE_BOUNDARY
+#define VELOCITY_BOUNDARY
+
+uniform vec2 invresolution;
+uniform float aspectRatio;
+
+vec2 clipToAspectSpace(vec2 p){
+    return vec2(p.x * aspectRatio, p.y);
+}
+
+vec2 aspectToTexelSpace(vec2 p){
+    return vec2(p.x / aspectRatio + 1.0 , p.y + 1.0)*.5;
+}
+
+
+float samplePressue(sampler2D pressure, vec2 coord){
+    vec2 cellOffset = vec2(0.0, 0.0);
+
+    
+    
+    
+    #ifdef PRESSURE_BOUNDARY
+    if(coord.x < 0.0)      cellOffset.x = 1.0;
+    else if(coord.x > 1.0) cellOffset.x = -1.0;
+    if(coord.y < 0.0)      cellOffset.y = 1.0;
+    else if(coord.y > 1.0) cellOffset.y = -1.0;
+    #endif
+
+    return texture2D(pressure, coord + cellOffset * invresolution).x;
+}
+
+
+vec2 sampleVelocity(sampler2D velocity, vec2 coord){
+    vec2 cellOffset = vec2(0.0, 0.0);
+    vec2 multiplier = vec2(1.0, 1.0);
+
+    
+    
+    
+    #ifdef VELOCITY_BOUNDARY
+    if(coord.x<0.0){
+        cellOffset.x = 1.0;
+        multiplier.x = -1.0;
+    }else if(coord.x>1.0){
+        cellOffset.x = -1.0;
+        multiplier.x = -1.0;
+    }
+    if(coord.y<0.0){
+        cellOffset.y = 1.0;
+        multiplier.y = -1.0;
+    }else if(coord.y>1.0){
+        cellOffset.y = -1.0;
+        multiplier.y = -1.0;
+    }
+    #endif
+
+    return multiplier * texture2D(velocity, coord + cellOffset * invresolution).xy;
+}
+
+uniform sampler2D pressure;
+uniform sampler2D divergence;
+uniform float alpha;
+
+varying vec2 texelCoord;
+
+void main(void){
+  
+  
+  float L = samplePressue(pressure, texelCoord - vec2(invresolution.x, 0));
+  float R = samplePressue(pressure, texelCoord + vec2(invresolution.x, 0));
+  float B = samplePressue(pressure, texelCoord - vec2(0, invresolution.y));
+  float T = samplePressue(pressure, texelCoord + vec2(0, invresolution.y));
+
+  float bC = texture2D(divergence, texelCoord).x;
+
+  gl_FragColor = vec4( (L + R + B + T + alpha * bC) * .25, 0, 0, 1 );
+}`;
 	}
 	,__class__: PressureSolve
 });
@@ -820,8 +1223,116 @@ PressureGradientSubstract.prototype = $extend(FluidBase.prototype,{
 		this._aStride += 0;
 	}
 	,initSources: function() {
-		this._vertSource = "\r\n#ifdef GL_ES\r\nprecision highp float;\r\nprecision highp sampler2D;\r\n#endif\n\n\r\nattribute vec2 vertexPosition;\r\n\r\nuniform float aspectRatio;\r\n\r\nvarying vec2 texelCoord;\r\n\r\n\r\nvarying vec2 p;\r\n\r\nvoid main() {\r\n\ttexelCoord = vertexPosition;\r\n\t\r\n\tvec2 clipSpace = 2.0*texelCoord - 1.0;\t\r\n\t\r\n\tp = vec2(clipSpace.x * aspectRatio, clipSpace.y);\r\n\r\n\tgl_Position = vec4(clipSpace, 0.0, 1.0 );\t\r\n}\r\n\n\n\n";
-		this._fragSource = "\r\n#ifdef GL_ES\r\nprecision highp float;\r\nprecision highp sampler2D;\r\n#endif\n\n\r\n\r\n#define PRESSURE_BOUNDARY\r\n#define VELOCITY_BOUNDARY\r\n\r\nuniform vec2 invresolution;\r\nuniform float aspectRatio;\r\n\r\nvec2 clipToAspectSpace(vec2 p){\r\n    return vec2(p.x * aspectRatio, p.y);\r\n}\r\n\r\nvec2 aspectToTexelSpace(vec2 p){\r\n    return vec2(p.x / aspectRatio + 1.0 , p.y + 1.0)*.5;\r\n}\r\n\r\n\r\nfloat samplePressue(sampler2D pressure, vec2 coord){\r\n    vec2 cellOffset = vec2(0.0, 0.0);\r\n\r\n    \r\n    \r\n    \r\n    #ifdef PRESSURE_BOUNDARY\r\n    if(coord.x < 0.0)      cellOffset.x = 1.0;\r\n    else if(coord.x > 1.0) cellOffset.x = -1.0;\r\n    if(coord.y < 0.0)      cellOffset.y = 1.0;\r\n    else if(coord.y > 1.0) cellOffset.y = -1.0;\r\n    #endif\r\n\r\n    return texture2D(pressure, coord + cellOffset * invresolution).x;\r\n}\r\n\r\n\r\nvec2 sampleVelocity(sampler2D velocity, vec2 coord){\r\n    vec2 cellOffset = vec2(0.0, 0.0);\r\n    vec2 multiplier = vec2(1.0, 1.0);\r\n\r\n    \r\n    \r\n    \r\n    #ifdef VELOCITY_BOUNDARY\r\n    if(coord.x<0.0){\r\n        cellOffset.x = 1.0;\r\n        multiplier.x = -1.0;\r\n    }else if(coord.x>1.0){\r\n        cellOffset.x = -1.0;\r\n        multiplier.x = -1.0;\r\n    }\r\n    if(coord.y<0.0){\r\n        cellOffset.y = 1.0;\r\n        multiplier.y = -1.0;\r\n    }else if(coord.y>1.0){\r\n        cellOffset.y = -1.0;\r\n        multiplier.y = -1.0;\r\n    }\r\n    #endif\r\n\r\n    return multiplier * texture2D(velocity, coord + cellOffset * invresolution).xy;\r\n}\n\nuniform sampler2D pressure;\r\nuniform sampler2D velocity;\r\nuniform float halfrdx;\r\n\r\nvarying vec2 texelCoord;\r\n\r\nvoid main(void){\r\n  float L = samplePressue(pressure, texelCoord - vec2(invresolution.x, 0));\r\n  float R = samplePressue(pressure, texelCoord + vec2(invresolution.x, 0));\r\n  float B = samplePressue(pressure, texelCoord - vec2(0, invresolution.y));\r\n  float T = samplePressue(pressure, texelCoord + vec2(0, invresolution.y));\r\n\r\n  vec2 v = texture2D(velocity, texelCoord).xy;\r\n\r\n  gl_FragColor = vec4(v - halfrdx*vec2(R-L, T-B), 0, 1);\r\n}\r\n\r\n\n";
+		this._vertSource = `
+		#ifdef GL_ES
+precision highp float;
+precision highp sampler2D;
+#endif
+
+
+attribute vec2 vertexPosition;
+
+uniform float aspectRatio;
+
+varying vec2 texelCoord;
+
+
+varying vec2 p;
+
+void main() {
+	texelCoord = vertexPosition;
+	
+	vec2 clipSpace = 2.0*texelCoord - 1.0;	
+	
+	p = vec2(clipSpace.x * aspectRatio, clipSpace.y);
+
+	gl_Position = vec4(clipSpace, 0.0, 1.0 );	
+}
+`;
+		this._fragSource = `
+		#ifdef GL_ES
+precision highp float;
+precision highp sampler2D;
+#endif
+
+
+
+#define PRESSURE_BOUNDARY
+#define VELOCITY_BOUNDARY
+
+uniform vec2 invresolution;
+uniform float aspectRatio;
+
+vec2 clipToAspectSpace(vec2 p){
+    return vec2(p.x * aspectRatio, p.y);
+}
+
+vec2 aspectToTexelSpace(vec2 p){
+    return vec2(p.x / aspectRatio + 1.0 , p.y + 1.0)*.5;
+}
+
+
+float samplePressue(sampler2D pressure, vec2 coord){
+    vec2 cellOffset = vec2(0.0, 0.0);
+
+    
+    
+    
+    #ifdef PRESSURE_BOUNDARY
+    if(coord.x < 0.0)      cellOffset.x = 1.0;
+    else if(coord.x > 1.0) cellOffset.x = -1.0;
+    if(coord.y < 0.0)      cellOffset.y = 1.0;
+    else if(coord.y > 1.0) cellOffset.y = -1.0;
+    #endif
+
+    return texture2D(pressure, coord + cellOffset * invresolution).x;
+}
+
+
+vec2 sampleVelocity(sampler2D velocity, vec2 coord){
+    vec2 cellOffset = vec2(0.0, 0.0);
+    vec2 multiplier = vec2(1.0, 1.0);
+
+    
+    
+    
+    #ifdef VELOCITY_BOUNDARY
+    if(coord.x<0.0){
+        cellOffset.x = 1.0;
+        multiplier.x = -1.0;
+    }else if(coord.x>1.0){
+        cellOffset.x = -1.0;
+        multiplier.x = -1.0;
+    }
+    if(coord.y<0.0){
+        cellOffset.y = 1.0;
+        multiplier.y = -1.0;
+    }else if(coord.y>1.0){
+        cellOffset.y = -1.0;
+        multiplier.y = -1.0;
+    }
+    #endif
+
+    return multiplier * texture2D(velocity, coord + cellOffset * invresolution).xy;
+}
+
+uniform sampler2D pressure;
+uniform sampler2D velocity;
+uniform float halfrdx;
+
+varying vec2 texelCoord;
+
+void main(void){
+  float L = samplePressue(pressure, texelCoord - vec2(invresolution.x, 0));
+  float R = samplePressue(pressure, texelCoord + vec2(invresolution.x, 0));
+  float B = samplePressue(pressure, texelCoord - vec2(0, invresolution.y));
+  float T = samplePressue(pressure, texelCoord + vec2(0, invresolution.y));
+
+  vec2 v = texture2D(velocity, texelCoord).xy;
+
+  gl_FragColor = vec4(v - halfrdx*vec2(R-L, T-B), 0, 1);
+}
+`;
 	}
 	,__class__: PressureGradientSubstract
 });
@@ -846,8 +1357,116 @@ ApplyForces.prototype = $extend(FluidBase.prototype,{
 		this._aStride += 0;
 	}
 	,initSources: function() {
-		this._vertSource = "\r\n#ifdef GL_ES\r\nprecision highp float;\r\nprecision highp sampler2D;\r\n#endif\n\n\r\nattribute vec2 vertexPosition;\r\n\r\nuniform float aspectRatio;\r\n\r\nvarying vec2 texelCoord;\r\n\r\n\r\nvarying vec2 p;\r\n\r\nvoid main() {\r\n\ttexelCoord = vertexPosition;\r\n\t\r\n\tvec2 clipSpace = 2.0*texelCoord - 1.0;\t\r\n\t\r\n\tp = vec2(clipSpace.x * aspectRatio, clipSpace.y);\r\n\r\n\tgl_Position = vec4(clipSpace, 0.0, 1.0 );\t\r\n}\r\n\n\n\n";
-		this._fragSource = "\r\n#ifdef GL_ES\r\nprecision highp float;\r\nprecision highp sampler2D;\r\n#endif\n\n\r\n\r\n#define PRESSURE_BOUNDARY\r\n#define VELOCITY_BOUNDARY\r\n\r\nuniform vec2 invresolution;\r\nuniform float aspectRatio;\r\n\r\nvec2 clipToAspectSpace(vec2 p){\r\n    return vec2(p.x * aspectRatio, p.y);\r\n}\r\n\r\nvec2 aspectToTexelSpace(vec2 p){\r\n    return vec2(p.x / aspectRatio + 1.0 , p.y + 1.0)*.5;\r\n}\r\n\r\n\r\nfloat samplePressue(sampler2D pressure, vec2 coord){\r\n    vec2 cellOffset = vec2(0.0, 0.0);\r\n\r\n    \r\n    \r\n    \r\n    #ifdef PRESSURE_BOUNDARY\r\n    if(coord.x < 0.0)      cellOffset.x = 1.0;\r\n    else if(coord.x > 1.0) cellOffset.x = -1.0;\r\n    if(coord.y < 0.0)      cellOffset.y = 1.0;\r\n    else if(coord.y > 1.0) cellOffset.y = -1.0;\r\n    #endif\r\n\r\n    return texture2D(pressure, coord + cellOffset * invresolution).x;\r\n}\r\n\r\n\r\nvec2 sampleVelocity(sampler2D velocity, vec2 coord){\r\n    vec2 cellOffset = vec2(0.0, 0.0);\r\n    vec2 multiplier = vec2(1.0, 1.0);\r\n\r\n    \r\n    \r\n    \r\n    #ifdef VELOCITY_BOUNDARY\r\n    if(coord.x<0.0){\r\n        cellOffset.x = 1.0;\r\n        multiplier.x = -1.0;\r\n    }else if(coord.x>1.0){\r\n        cellOffset.x = -1.0;\r\n        multiplier.x = -1.0;\r\n    }\r\n    if(coord.y<0.0){\r\n        cellOffset.y = 1.0;\r\n        multiplier.y = -1.0;\r\n    }else if(coord.y>1.0){\r\n        cellOffset.y = -1.0;\r\n        multiplier.y = -1.0;\r\n    }\r\n    #endif\r\n\r\n    return multiplier * texture2D(velocity, coord + cellOffset * invresolution).xy;\r\n}\n\nuniform sampler2D velocity;\n\tuniform float dt;\n\tuniform float dx;\n\n\tvarying vec2 texelCoord;\n\tvarying vec2 p;\n";
+		this._vertSource = `
+		#ifdef GL_ES
+		precision highp float;
+		precision highp sampler2D;
+		#endif
+		attribute vec2 vertexPosition;
+		uniform float aspectRatio;
+		varying vec2 texelCoord;
+		varying vec2 p;
+		
+		void main() {
+			texelCoord = vertexPosition;
+			vec2 clipSpace = 2.0*texelCoord - 1.0;
+			p = vec2(clipSpace.x * aspectRatio, clipSpace.y);
+			gl_Position = vec4(clipSpace, 0.0, 1.0 );
+		}`;
+		this._fragSource = `
+		#ifdef GL_ES
+		precision highp float;
+		precision highp sampler2D;
+		#endif
+		
+		#define PRESSURE_BOUNDARY
+		#define VELOCITY_BOUNDARY
+		
+		uniform vec2 invresolution;
+		uniform float aspectRatio;
+		
+		vec2 clipToAspectSpace(vec2 p){
+			return vec2(p.x * aspectRatio, p.y);
+		}
+		vec2 aspectToTexelSpace(vec2 p){
+			return vec2(p.x / aspectRatio + 1.0 , p.y + 1.0)*.5;
+		}
+		float samplePressue(sampler2D pressure, vec2 coord){
+			vec2 cellOffset = vec2(0.0, 0.0);
+			#ifdef PRESSURE_BOUNDARY
+			if(coord.x < 0.0)      cellOffset.x = 1.0;
+			else if(coord.x > 1.0) cellOffset.x = -1.0;
+			if(coord.y < 0.0)      cellOffset.y = 1.0;
+			else if(coord.y > 1.0) cellOffset.y = -1.0;
+			#endif
+			
+			return texture2D(pressure, coord + cellOffset * invresolution).x;
+		}
+		vec2 sampleVelocity(sampler2D velocity, vec2 coord){
+			vec2 cellOffset = vec2(0.0, 0.0);
+			vec2 multiplier = vec2(1.0, 1.0);
+			#ifdef VELOCITY_BOUNDARY
+			if(coord.x<0.0){
+				cellOffset.x = 1.0;
+				multiplier.x = -1.0;
+			}else if(coord.x>1.0){
+				cellOffset.x = -1.0;
+				multiplier.x = -1.0;
+			}
+			if(coord.y<0.0){
+				cellOffset.y = 1.0;
+				multiplier.y = -1.0;
+			}else if(coord.y>1.0){
+				cellOffset.y = -1.0;
+				multiplier.y = -1.0;
+			}
+			
+			#endif
+			return multiplier * texture2D(velocity, coord + cellOffset * invresolution).xy;
+		}
+		uniform sampler2D velocity;
+		uniform float dt;
+		uniform float dx;
+		varying vec2 texelCoord;
+		varying vec2 p;
+		float distanceToSegment(vec2 a, vec2 b, vec2 p, out float fp){
+			vec2 d = p - a;
+			vec2 x = b - a;
+			fp = 0.0;
+			float lx = length(x);
+			if(lx <= 0.0001) return length(d);
+			float projection = dot(d, x / lx);
+			fp = projection / lx;
+			if(projection < 0.0)            return length(d);
+			else if(projection > length(x)) return length(p - b);
+			return sqrt(abs(dot(d,d) - projection*projection));
+		}
+		
+		float distanceToSegment(vec2 a, vec2 b, vec2 p){
+			float fp;
+			return distanceToSegment(a, b, p, fp);
+		}
+		uniform bool isMouseDown;
+		uniform vec2 mouse;
+		uniform vec2 lastMouse;
+		
+		void main(){
+			vec2 v = texture2D(velocity, texelCoord).xy;
+			v.xy *= 0.999;
+			if(isMouseDown){
+				vec2 mouseVelocity = -(lastMouse - mouse)/dt;
+				float projection;
+				float l = distanceToSegment(mouse, lastMouse, p, projection);
+				float taperFactor = 0.6;
+				float projectedFraction = 1.0 - clamp(projection, 0.0, 1.0)*taperFactor;
+				float R = 0.015;
+				float m = exp(-l/R);
+				m *= projectedFraction * projectedFraction;
+				vec2 targetVelocity = mouseVelocity * dx * 1.4;
+				v += (targetVelocity - v)*m;
+			}
+			gl_FragColor = vec4(v, 0, 1.);
+		}`;
 	}
 	,__class__: ApplyForces
 });
@@ -872,8 +1491,139 @@ UpdateDye.prototype = $extend(FluidBase.prototype,{
 		this._aStride += 0;
 	}
 	,initSources: function() {
-		this._vertSource = "\r\n#ifdef GL_ES\r\nprecision highp float;\r\nprecision highp sampler2D;\r\n#endif\n\n\r\nattribute vec2 vertexPosition;\r\n\r\nuniform float aspectRatio;\r\n\r\nvarying vec2 texelCoord;\r\n\r\n\r\nvarying vec2 p;\r\n\r\nvoid main() {\r\n\ttexelCoord = vertexPosition;\r\n\t\r\n\tvec2 clipSpace = 2.0*texelCoord - 1.0;\t\r\n\t\r\n\tp = vec2(clipSpace.x * aspectRatio, clipSpace.y);\r\n\r\n\tgl_Position = vec4(clipSpace, 0.0, 1.0 );\t\r\n}\r\n\n\n\n";
-		this._fragSource = "\r\n#ifdef GL_ES\r\nprecision highp float;\r\nprecision highp sampler2D;\r\n#endif\n\n\r\n\r\n#define PRESSURE_BOUNDARY\r\n#define VELOCITY_BOUNDARY\r\n\r\nuniform vec2 invresolution;\r\nuniform float aspectRatio;\r\n\r\nvec2 clipToAspectSpace(vec2 p){\r\n    return vec2(p.x * aspectRatio, p.y);\r\n}\r\n\r\nvec2 aspectToTexelSpace(vec2 p){\r\n    return vec2(p.x / aspectRatio + 1.0 , p.y + 1.0)*.5;\r\n}\r\n\r\n\r\nfloat samplePressue(sampler2D pressure, vec2 coord){\r\n    vec2 cellOffset = vec2(0.0, 0.0);\r\n\r\n    \r\n    \r\n    \r\n    #ifdef PRESSURE_BOUNDARY\r\n    if(coord.x < 0.0)      cellOffset.x = 1.0;\r\n    else if(coord.x > 1.0) cellOffset.x = -1.0;\r\n    if(coord.y < 0.0)      cellOffset.y = 1.0;\r\n    else if(coord.y > 1.0) cellOffset.y = -1.0;\r\n    #endif\r\n\r\n    return texture2D(pressure, coord + cellOffset * invresolution).x;\r\n}\r\n\r\n\r\nvec2 sampleVelocity(sampler2D velocity, vec2 coord){\r\n    vec2 cellOffset = vec2(0.0, 0.0);\r\n    vec2 multiplier = vec2(1.0, 1.0);\r\n\r\n    \r\n    \r\n    \r\n    #ifdef VELOCITY_BOUNDARY\r\n    if(coord.x<0.0){\r\n        cellOffset.x = 1.0;\r\n        multiplier.x = -1.0;\r\n    }else if(coord.x>1.0){\r\n        cellOffset.x = -1.0;\r\n        multiplier.x = -1.0;\r\n    }\r\n    if(coord.y<0.0){\r\n        cellOffset.y = 1.0;\r\n        multiplier.y = -1.0;\r\n    }else if(coord.y>1.0){\r\n        cellOffset.y = -1.0;\r\n        multiplier.y = -1.0;\r\n    }\r\n    #endif\r\n\r\n    return multiplier * texture2D(velocity, coord + cellOffset * invresolution).xy;\r\n}\n\nuniform sampler2D dye;\n\tuniform float dt;\n\tuniform float dx;\n\n\tvarying vec2 texelCoord;\n\tvarying vec2 p;\n";
+		this._vertSource = `
+		
+		#ifdef GL_ES
+		precision highp float;
+		precision highp sampler2D;
+		#endif
+		
+		attribute vec2 vertexPosition;
+		uniform float aspectRatio;
+		varying vec2 texelCoord;
+		varying vec2 p;
+		
+		
+		void main() {
+			texelCoord = vertexPosition;
+			
+			vec2 clipSpace = 2.0*texelCoord - 1.0;	//from 0->1 to -1, 1 (clip space)
+			
+			p = vec2(clipSpace.x * aspectRatio, clipSpace.y);
+		
+			gl_Position = vec4(clipSpace, 0.0, 1.0 );	
+		}`;
+		this._fragSource = `
+		#ifdef GL_ES
+		precision highp float;
+		precision highp sampler2D;
+		#endif
+
+		#define PRESSURE_BOUNDARY
+		#define VELOCITY_BOUNDARY
+		
+		uniform vec2 invresolution;
+		uniform float aspectRatio;
+		
+		vec2 clipToAspectSpace(vec2 p){
+				return vec2(p.x * aspectRatio, p.y);
+		}
+		
+		vec2 aspectToTexelSpace(vec2 p){
+				return vec2(p.x / aspectRatio + 1.0 , p.y + 1.0)*.5;
+		}
+		
+		//sampling pressure texture factoring in boundary conditions
+		float samplePressue(sampler2D pressure, vec2 coord){
+				vec2 cellOffset = vec2(0.0, 0.0);
+		
+				//pure Neumann boundary conditions: 0 pressure gradient across the boundary
+				//dP/dx = 0
+				//walls
+				#ifdef PRESSURE_BOUNDARY
+				if(coord.x < 0.0)      cellOffset.x = 1.0;
+				else if(coord.x > 1.0) cellOffset.x = -1.0;
+				if(coord.y < 0.0)      cellOffset.y = 1.0;
+				else if(coord.y > 1.0) cellOffset.y = -1.0;
+				#endif
+		
+				return texture2D(pressure, coord + cellOffset * invresolution).x;
+		}
+		
+		//sampling velocity texture factoring in boundary conditions
+		vec2 sampleVelocity(sampler2D velocity, vec2 coord){
+				vec2 cellOffset = vec2(0.0, 0.0);
+				vec2 multiplier = vec2(1.0, 1.0);
+		
+				//free-slip boundary: the average flow across the boundary is restricted to 0
+				//avg(uA.xy, uB.xy) dot (boundary normal).xy = 0
+				//walls
+				#ifdef VELOCITY_BOUNDARY
+				if(coord.x<0.0){
+						cellOffset.x = 1.0;
+						multiplier.x = -1.0;
+				}else if(coord.x>1.0){
+						cellOffset.x = -1.0;
+						multiplier.x = -1.0;
+				}
+				if(coord.y<0.0){
+						cellOffset.y = 1.0;
+						multiplier.y = -1.0;
+				}else if(coord.y>1.0){
+						cellOffset.y = -1.0;
+						multiplier.y = -1.0;
+				}
+				#endif
+		
+				return multiplier * texture2D(velocity, coord + cellOffset * invresolution).xy;
+		}
+		
+		
+		
+		uniform sampler2D dye;
+		uniform float dt;
+		uniform float dx;
+		varying vec2 texelCoord;
+		varying vec2 p;
+		float distanceToSegment(vec2 a, vec2 b, vec2 p, out float fp){
+			vec2 d = p - a;
+			vec2 x = b - a;
+			fp = 0.0; 
+			float lx = length(x); 
+			if(lx <= 0.0001) return length(d); 
+			float projection = dot(d, x / lx); 
+			fp = projection / lx;
+			if(projection < 0.0)
+				return length(d); 
+			else if(projection > length(x)) return length(p - b);
+			return sqrt(abs(dot(d,d) - projection*projection)); 
+		}
+		float distanceToSegment(vec2 a, vec2 b, vec2 p){
+			float fp; 
+			return distanceToSegment(a, b, p, fp); 
+		}
+		uniform bool isMouseDown; 
+		uniform vec2 mouse;
+		uniform vec2 lastMouse; 
+		void main(){
+			vec4 color = texture2D(dye, texelCoord);
+			color.r *= (0.9797); 
+			color.g *= (0.9494);
+			color.b *= (0.9696); 
+			if(isMouseDown){ 
+				vec2 mouseVelocity = (mouse - lastMouse)/dt; 
+				float projection;
+				float l = distanceToSegment(mouse, lastMouse, p, projection); 
+				float taperFactor = 0.6;
+				float projectedFraction = 1.0 - clamp(projection, 0.0, 1.0)*taperFactor; 
+				float R = 0.025; 
+				float m = exp(-l/R); 
+				float speed = length(mouseVelocity); 
+				float x = clamp((speed * speed * 0.02 - l * 5.0) * projectedFraction, 0., 1.); 
+				color.rgb += m * (mix(vec3(2.4, 0, 5.9) / 60.0, vec3(0.2, 51.8, 100) / 30.0, x) + (vec3(100) / 100.) * pow(x, 9.) * sin(x)); 
+			}
+			gl_FragColor = color; 
+		}`;
 	}
 	,__class__: UpdateDye
 });
@@ -2039,8 +2789,140 @@ MouseDye.prototype = $extend(UpdateDye.prototype,{
 		this._aStride += 0;
 	}
 	,initSources: function() {
-		this._vertSource = "\r\n#ifdef GL_ES\r\nprecision highp float;\r\nprecision highp sampler2D;\r\n#endif\n\n\r\nattribute vec2 vertexPosition;\r\n\r\nuniform float aspectRatio;\r\n\r\nvarying vec2 texelCoord;\r\n\r\n\r\nvarying vec2 p;\r\n\r\nvoid main() {\r\n\ttexelCoord = vertexPosition;\r\n\t\r\n\tvec2 clipSpace = 2.0*texelCoord - 1.0;\t\r\n\t\r\n\tp = vec2(clipSpace.x * aspectRatio, clipSpace.y);\r\n\r\n\tgl_Position = vec4(clipSpace, 0.0, 1.0 );\t\r\n}\r\n\n\n\n\n\n";
-		this._fragSource = "\r\n#ifdef GL_ES\r\nprecision highp float;\r\nprecision highp sampler2D;\r\n#endif\n\n\r\n\r\n#define PRESSURE_BOUNDARY\r\n#define VELOCITY_BOUNDARY\r\n\r\nuniform vec2 invresolution;\r\nuniform float aspectRatio;\r\n\r\nvec2 clipToAspectSpace(vec2 p){\r\n    return vec2(p.x * aspectRatio, p.y);\r\n}\r\n\r\nvec2 aspectToTexelSpace(vec2 p){\r\n    return vec2(p.x / aspectRatio + 1.0 , p.y + 1.0)*.5;\r\n}\r\n\r\n\r\nfloat samplePressue(sampler2D pressure, vec2 coord){\r\n    vec2 cellOffset = vec2(0.0, 0.0);\r\n\r\n    \r\n    \r\n    \r\n    #ifdef PRESSURE_BOUNDARY\r\n    if(coord.x < 0.0)      cellOffset.x = 1.0;\r\n    else if(coord.x > 1.0) cellOffset.x = -1.0;\r\n    if(coord.y < 0.0)      cellOffset.y = 1.0;\r\n    else if(coord.y > 1.0) cellOffset.y = -1.0;\r\n    #endif\r\n\r\n    return texture2D(pressure, coord + cellOffset * invresolution).x;\r\n}\r\n\r\n\r\nvec2 sampleVelocity(sampler2D velocity, vec2 coord){\r\n    vec2 cellOffset = vec2(0.0, 0.0);\r\n    vec2 multiplier = vec2(1.0, 1.0);\r\n\r\n    \r\n    \r\n    \r\n    #ifdef VELOCITY_BOUNDARY\r\n    if(coord.x<0.0){\r\n        cellOffset.x = 1.0;\r\n        multiplier.x = -1.0;\r\n    }else if(coord.x>1.0){\r\n        cellOffset.x = -1.0;\r\n        multiplier.x = -1.0;\r\n    }\r\n    if(coord.y<0.0){\r\n        cellOffset.y = 1.0;\r\n        multiplier.y = -1.0;\r\n    }else if(coord.y>1.0){\r\n        cellOffset.y = -1.0;\r\n        multiplier.y = -1.0;\r\n    }\r\n    #endif\r\n\r\n    return multiplier * texture2D(velocity, coord + cellOffset * invresolution).xy;\r\n}\n\nuniform sampler2D dye;\n\tuniform float dt;\n\tuniform float dx;\n\n\tvarying vec2 texelCoord;\n\tvarying vec2 p;\n\n\r\nfloat distanceToSegment(vec2 a, vec2 b, vec2 p, out float fp){\r\n\tvec2 d = p - a;\r\n\tvec2 x = b - a;\r\n\r\n\tfp = 0.0; \r\n\tfloat lx = length(x);\r\n\t\r\n\tif(lx <= 0.0001) return length(d);\r\n\r\n\tfloat projection = dot(d, x / lx); \r\n\r\n\tfp = projection / lx;\r\n\r\n\tif(projection < 0.0)            return length(d);\r\n\telse if(projection > length(x)) return length(p - b);\r\n\treturn sqrt(abs(dot(d,d) - projection*projection));\r\n}\r\nfloat distanceToSegment(vec2 a, vec2 b, vec2 p){\r\n\tfloat fp;\r\n\treturn distanceToSegment(a, b, p, fp);\r\n}\n\tuniform bool isMouseDown;\n\tuniform vec2 mouse; \n\tuniform vec2 lastMouse;\n\tvoid main(){\n\t\tvec4 color = texture2D(dye, texelCoord);\n\t\tcolor.r *= (0.9797);\n\t\tcolor.g *= (0.9494);\n\t\tcolor.b *= (0.9696);\n\n\t\tif(isMouseDown){\n\t\t\tvec2 mouseVelocity = (mouse - lastMouse)/dt;\n\n\t\t\t\n\t\t\tfloat projection;\n\t\t\tfloat l = distanceToSegment(mouse, lastMouse, p, projection);\n\t\t\tfloat taperFactor = 0.6;\n\t\t\tfloat projectedFraction = 1.0 - clamp(projection, 0.0, 1.0)*taperFactor;\n\t\t\tfloat R = 0.025;\n\t\t\tfloat m = exp(-l/R);\n\n\t\t\tfloat speed = length(mouseVelocity);\n\t\t\tfloat x = clamp((speed * speed * 0.02 - l * 5.0) * projectedFraction, 0., 1.);\n\t\t\tcolor.rgb += m * (\n\t\t\t\tmix(vec3(2.4, 0, 5.9) / 60.0, vec3(0.2, 51.8, 100) / 30.0, x)\n\t\t\t\t\t+ (vec3(100) / 100.) * pow(x, 9.)\n\t\t\t);\n\t\t}\n\n\t\tgl_FragColor = color;\n\t}\n";
+		// texel-space.vert
+		this._vertSource = `
+		#ifdef GL_ES
+		precision highp float;
+		precision highp sampler2D;
+		#endif
+		
+		attribute vec2 vertexPosition;
+		uniform float aspectRatio;
+		varying vec2 texelCoord;
+		varying vec2 p;
+		
+		
+		void main() {
+			texelCoord = vertexPosition;
+			
+			vec2 clipSpace = 2.0*texelCoord - 1.0;	//from 0->1 to -1, 1 (clip space)
+			
+			p = vec2(clipSpace.x * aspectRatio, clipSpace.y);
+		
+			gl_Position = vec4(clipSpace, 0.0, 1.0 );	
+		}
+		`;
+		this._fragSource = `
+		#ifdef GL_ES
+		precision highp float;
+		precision highp sampler2D;
+		#endif
+
+		#define PRESSURE_BOUNDARY
+		#define VELOCITY_BOUNDARY
+		
+		uniform vec2 invresolution;
+		uniform float aspectRatio;
+		
+		vec2 clipToAspectSpace(vec2 p){
+				return vec2(p.x * aspectRatio, p.y);
+		}
+		
+		vec2 aspectToTexelSpace(vec2 p){
+				return vec2(p.x / aspectRatio + 1.0 , p.y + 1.0)*.5;
+		}
+		
+		//sampling pressure texture factoring in boundary conditions
+		float samplePressue(sampler2D pressure, vec2 coord){
+				vec2 cellOffset = vec2(0.0, 0.0);
+		
+				//pure Neumann boundary conditions: 0 pressure gradient across the boundary
+				//dP/dx = 0
+				//walls
+				#ifdef PRESSURE_BOUNDARY
+				if(coord.x < 0.0)      cellOffset.x = 1.0;
+				else if(coord.x > 1.0) cellOffset.x = -1.0;
+				if(coord.y < 0.0)      cellOffset.y = 1.0;
+				else if(coord.y > 1.0) cellOffset.y = -1.0;
+				#endif
+		
+				return texture2D(pressure, coord + cellOffset * invresolution).x;
+		}
+		
+		//sampling velocity texture factoring in boundary conditions
+		vec2 sampleVelocity(sampler2D velocity, vec2 coord){
+				vec2 cellOffset = vec2(0.0, 0.0);
+				vec2 multiplier = vec2(1.0, 1.0);
+		
+				//free-slip boundary: the average flow across the boundary is restricted to 0
+				//avg(uA.xy, uB.xy) dot (boundary normal).xy = 0
+				//walls
+				#ifdef VELOCITY_BOUNDARY
+				if(coord.x<0.0){
+						cellOffset.x = 1.0;
+						multiplier.x = -1.0;
+				}else if(coord.x>1.0){
+						cellOffset.x = -1.0;
+						multiplier.x = -1.0;
+				}
+				if(coord.y<0.0){
+						cellOffset.y = 1.0;
+						multiplier.y = -1.0;
+				}else if(coord.y>1.0){
+						cellOffset.y = -1.0;
+						multiplier.y = -1.0;
+				}
+				#endif
+		
+				return multiplier * texture2D(velocity, coord + cellOffset * invresolution).xy;
+		}
+		
+		
+		
+		uniform sampler2D dye;
+		uniform float dt;
+		uniform float dx;
+		varying vec2 texelCoord;
+		varying vec2 p;
+		float distanceToSegment(vec2 a, vec2 b, vec2 p, out float fp){
+			vec2 d = p - a;
+			vec2 x = b - a;
+			fp = 0.0; 
+			float lx = length(x); 
+			if(lx <= 0.0001) return length(d); 
+			float projection = dot(d, x / lx); 
+			fp = projection / lx;
+			if(projection < 0.0)
+				return length(d); 
+			else if(projection > length(x)) return length(p - b);
+			return sqrt(abs(dot(d,d) - projection*projection)); 
+		}
+		float distanceToSegment(vec2 a, vec2 b, vec2 p){
+			float fp; 
+			return distanceToSegment(a, b, p, fp); 
+		}
+		uniform bool isMouseDown; 
+		uniform vec2 mouse;
+		uniform vec2 lastMouse; 
+		void main(){
+			vec4 color = texture2D(dye, texelCoord);
+			color.r *= (0.9797); 
+			color.g *= (0.9494);
+			color.b *= (0.9696); 
+			if(isMouseDown){ 
+				vec2 mouseVelocity = (mouse - lastMouse)/dt; 
+				float projection;
+				float l = distanceToSegment(mouse, lastMouse, p, projection); 
+				float taperFactor = 0.6;
+				float projectedFraction = 1.0 - clamp(projection, 0.0, 1.0)*taperFactor; 
+				float R = 0.025; 
+				float m = exp(-l/R); 
+				float speed = length(mouseVelocity); 
+				float x = clamp((speed * speed * 0.02 - l * 5.0) * projectedFraction, 0., 1.); 
+				color.rgb += m * (mix(vec3(2.4, 0, 5.9) / 60.0, vec3(0.2, 51.8, 100) / 30.0, x) + (vec3(100) / 100.) * pow(x, 9.) * sin(x)); 
+			}
+			gl_FragColor = color; 
+		}`;
 	}
 	,__class__: MouseDye
 });
@@ -2065,119 +2947,116 @@ MouseForce.prototype = $extend(ApplyForces.prototype,{
 		this._aStride += 0;
 	}
 	,initSources: function() {
-		this._vertSource = "\r\n#ifdef GL_ES\r\nprecision highp float;\r\nprecision highp sampler2D;\r\n#endif\n\n\r\nattribute vec2 vertexPosition;\r\n\r\nuniform float aspectRatio;\r\n\r\nvarying vec2 texelCoord;\r\n\r\n\r\nvarying vec2 p;\r\n\r\nvoid main() {\r\n\ttexelCoord = vertexPosition;\r\n\t\r\n\tvec2 clipSpace = 2.0*texelCoord - 1.0;\t\r\n\t\r\n\tp = vec2(clipSpace.x * aspectRatio, clipSpace.y);\r\n\r\n\tgl_Position = vec4(clipSpace, 0.0, 1.0 );\t\r\n}\r\n\n\n\n\n\n";
+		this._vertSource = `
+		#ifdef GL_ES
+		precision highp float;
+		precision highp sampler2D;
+		#endif
+		attribute vec2 vertexPosition;
+		uniform float aspectRatio;
+		varying vec2 texelCoord;
+		varying vec2 p;
+		
+		void main() {
+			texelCoord = vertexPosition;
+			vec2 clipSpace = 2.0*texelCoord - 1.0;
+			p = vec2(clipSpace.x * aspectRatio, clipSpace.y);
+			gl_Position = vec4(clipSpace, 0.0, 1.0 );
+		}`;
 		this._fragSource = `
-#ifdef GL_ES
-precision highp float;
-precision highp sampler2D;
-#endif
-
-#define PRESSURE_BOUNDARY
-#define VELOCITY_BOUNDARY
-
-uniform vec2 invresolution;
-uniform float aspectRatio;
-
-vec2 clipToAspectSpace(vec2 p){
-    return vec2(p.x * aspectRatio, p.y);
-}
-
-vec2 aspectToTexelSpace(vec2 p){
-    return vec2(p.x / aspectRatio + 1.0 , p.y + 1.0)*.5;
-}
-
-float samplePressue(sampler2D pressure, vec2 coord){
-    vec2 cellOffset = vec2(0.0, 0.0);
-
-    #ifdef PRESSURE_BOUNDARY
-    if(coord.x < 0.0)      cellOffset.x = 1.0;
-    else if(coord.x > 1.0) cellOffset.x = -1.0;
-    if(coord.y < 0.0)      cellOffset.y = 1.0;
-    else if(coord.y > 1.0) cellOffset.y = -1.0;
-    #endif
-
-    return texture2D(pressure, coord + cellOffset * invresolution).x;
-}
-
-
-vec2 sampleVelocity(sampler2D velocity, vec2 coord){
-    vec2 cellOffset = vec2(0.0, 0.0);
-    vec2 multiplier = vec2(1.0, 1.0);
-
-    #ifdef VELOCITY_BOUNDARY
-    if(coord.x<0.0){
-        cellOffset.x = 1.0;
-        multiplier.x = -1.0;
-    }else if(coord.x>1.0){
-        cellOffset.x = -1.0;
-        multiplier.x = -1.0;
-    }
-    if(coord.y<0.0){
-        cellOffset.y = 1.0;
-        multiplier.y = -1.0;
-    }else if(coord.y>1.0){
-        cellOffset.y = -1.0;
-        multiplier.y = -1.0;
-    }
-    #endif
-
-    return multiplier * texture2D(velocity, coord + cellOffset * invresolution).xy;
-}
-
-uniform sampler2D velocity;
-	uniform float dt;
-	uniform float dx;
-
-	varying vec2 texelCoord;
-	varying vec2 p;
-
-
-float distanceToSegment(vec2 a, vec2 b, vec2 p, out float fp){
-	vec2 d = p - a;
-	vec2 x = b - a;
-
-	fp = 0.0;
-	float lx = length(x);
-
-	if(lx <= 0.0001) return length(d);
-
-	float projection = dot(d, x / lx);
-
-	fp = projection / lx;
-
-	if(projection < 0.0)            return length(d);
-	else if(projection > length(x)) return length(p - b);
-	return sqrt(abs(dot(d,d) - projection*projection));
-}
-float distanceToSegment(vec2 a, vec2 b, vec2 p){
-	float fp;
-	return distanceToSegment(a, b, p, fp);
-}
-	uniform bool isMouseDown;
-	uniform vec2 mouse;
-	uniform vec2 lastMouse;
-void main(){
-		vec2 v = texture2D(velocity, texelCoord).xy;
-		v.xy *= 0.999;
-		if(isMouseDown){
-			vec2 mouseVelocity = -(lastMouse - mouse)/dt;
-
-
-
-			float projection;
-			float l = distanceToSegment(mouse, lastMouse, p, projection);
-			float taperFactor = 0.6;
-			float projectedFraction = 1.0 - clamp(projection, 0.0, 1.0)*taperFactor;
-			float R = 0.015;
-			float m = exp(-l/R);
-			m *= projectedFraction * projectedFraction;
-			vec2 targetVelocity = mouseVelocity * dx * 1.4;
-			v += (targetVelocity - v)*m;
+		#ifdef GL_ES
+		precision highp float;
+		precision highp sampler2D;
+		#endif
+		
+		#define PRESSURE_BOUNDARY
+		#define VELOCITY_BOUNDARY
+		
+		uniform vec2 invresolution;
+		uniform float aspectRatio;
+		
+		vec2 clipToAspectSpace(vec2 p){
+			return vec2(p.x * aspectRatio, p.y);
 		}
-		gl_FragColor = vec4(v, 0, 1.);
-	}
-
-`;
+		vec2 aspectToTexelSpace(vec2 p){
+			return vec2(p.x / aspectRatio + 1.0 , p.y + 1.0)*.5;
+		}
+		float samplePressue(sampler2D pressure, vec2 coord){
+			vec2 cellOffset = vec2(0.0, 0.0);
+			#ifdef PRESSURE_BOUNDARY
+			if(coord.x < 0.0)      cellOffset.x = 1.0;
+			else if(coord.x > 1.0) cellOffset.x = -1.0;
+			if(coord.y < 0.0)      cellOffset.y = 1.0;
+			else if(coord.y > 1.0) cellOffset.y = -1.0;
+			#endif
+			
+			return texture2D(pressure, coord + cellOffset * invresolution).x;
+		}
+		vec2 sampleVelocity(sampler2D velocity, vec2 coord){
+			vec2 cellOffset = vec2(0.0, 0.0);
+			vec2 multiplier = vec2(1.0, 1.0);
+			#ifdef VELOCITY_BOUNDARY
+			if(coord.x<0.0){
+				cellOffset.x = 1.0;
+				multiplier.x = -1.0;
+			}else if(coord.x>1.0){
+				cellOffset.x = -1.0;
+				multiplier.x = -1.0;
+			}
+			if(coord.y<0.0){
+				cellOffset.y = 1.0;
+				multiplier.y = -1.0;
+			}else if(coord.y>1.0){
+				cellOffset.y = -1.0;
+				multiplier.y = -1.0;
+			}
+			
+			#endif
+			return multiplier * texture2D(velocity, coord + cellOffset * invresolution).xy;
+		}
+		uniform sampler2D velocity;
+		uniform float dt;
+		uniform float dx;
+		varying vec2 texelCoord;
+		varying vec2 p;
+		float distanceToSegment(vec2 a, vec2 b, vec2 p, out float fp){
+			vec2 d = p - a;
+			vec2 x = b - a;
+			fp = 0.0;
+			float lx = length(x);
+			if(lx <= 0.0001) return length(d);
+			float projection = dot(d, x / lx);
+			fp = projection / lx;
+			if(projection < 0.0)            return length(d);
+			else if(projection > length(x)) return length(p - b);
+			return sqrt(abs(dot(d,d) - projection*projection));
+		}
+		
+		float distanceToSegment(vec2 a, vec2 b, vec2 p){
+			float fp;
+			return distanceToSegment(a, b, p, fp);
+		}
+		uniform bool isMouseDown;
+		uniform vec2 mouse;
+		uniform vec2 lastMouse;
+		
+		void main(){
+			vec2 v = texture2D(velocity, texelCoord).xy;
+			v.xy *= 0.999;
+			if(isMouseDown){
+				vec2 mouseVelocity = -(lastMouse - mouse)/dt;
+				float projection;
+				float l = distanceToSegment(mouse, lastMouse, p, projection);
+				float taperFactor = 0.6;
+				float projectedFraction = 1.0 - clamp(projection, 0.0, 1.0)*taperFactor;
+				float R = 0.015;
+				float m = exp(-l/R);
+				m *= projectedFraction * projectedFraction;
+				vec2 targetVelocity = mouseVelocity * dx * 1.4;
+				v += (targetVelocity - v)*m;
+			}
+			gl_FragColor = vec4(v, 0, 1.);
+		}`;
 	}
 	,__class__: MouseForce
 });
