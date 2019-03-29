@@ -1,0 +1,11 @@
+{
+  "configurations": [
+    {
+      "name": "GPU Fluid Experiments",
+      "type": "chrome",
+      "host": 127.0.0.1,
+      "url": "http://127.0.0.1:8887/",
+      "port": 9222
+    }
+  ]
+}

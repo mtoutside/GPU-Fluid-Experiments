@@ -17,7 +17,7 @@ class Main extends snow.App{
 	var fluid:GPUFluid;
 	var particles:GPUParticles;
 	//Geometry
-	var textureQuad:GLBuffer = null; 
+	var textureQuad:GLBuffer = null;
 	//Framebuffers
 	var screenBuffer:GLFramebuffer = null;	//null for all platforms excluding ios, where it references the defaultFramebuffer (UIStageView.mm)
 	//Render Targets
@@ -50,8 +50,8 @@ class Main extends snow.App{
 	var offScreenFilter:Int;
 	var simulationQuality(default, set):SimulationQuality;
 
-	static inline var OFFSCREEN_RENDER = false;//seems to be faster when on!
-	
+	static var OFFSCREEN_RENDER = false;//seems to be faster when on!
+
 	public function new () {
 
 		performanceMonitor = new PerformanceMonitor(35, null, 2000);
@@ -91,14 +91,14 @@ class Main extends snow.App{
 	}
 
 	override function config( config:AppConfig ) : AppConfig {
-		
+
 		#if js
 		config.runtime.prevent_default_context_menu = false;
 		#end
 		config.window.borderless = true;
 		config.window.fullscreen = true;
 		config.window.title = "GPU Fluid";
-		//for some reason, window width and height are set initially from config in browsers and 
+		//for some reason, window width and height are set initially from config in browsers and
 		//ignores true size
 		#if js
 		config.window.width = js.Browser.window.innerWidth;
@@ -218,17 +218,17 @@ class Main extends snow.App{
 		}
 	}
 
-	inline function renderTexture(texture:GLTexture){
+	function renderTexture(texture:GLTexture){
 		GL.bindBuffer (GL.ARRAY_BUFFER, textureQuad);
 
 		screenTextureShader.texture.data = texture;
-		
+
 		screenTextureShader.activate(true, true);
 		GL.drawArrays(GL.TRIANGLE_STRIP, 0, 4);
 		screenTextureShader.deactivate();
 	}
 
-	inline function renderParticles():Void{
+	function renderParticles():Void{
 		//set vertices
 		GL.bindBuffer(GL.ARRAY_BUFFER, particles.particleUVs);
 
@@ -344,16 +344,16 @@ class Main extends snow.App{
 	//---- Interface ----//
 
 	function reset():Void{
-		particles.reset();	
+		particles.reset();
 		fluid.clear();
 	}
 
 	//coordinate conversion
-	inline function windowToClipSpaceX(x:Float) return (x/app.runtime.window_width())*2 - 1;
-	inline function windowToClipSpaceY(y:Float) return ((app.runtime.window_height()-y)/app.runtime.window_height())*2 - 1;
+	function windowToClipSpaceX(x:Float) return (x/app.runtime.window_width())*2 - 1;
+	function windowToClipSpaceY(y:Float) return ((app.runtime.window_height()-y)/app.runtime.window_height())*2 - 1;
 
 	override function onmousedown( x : Float , y : Float , button : Int, _, _){
-		this.isMouseDown = true; 
+		this.isMouseDown = true;
 	}
 	override function onmouseup( x : Float , y : Float , button : Int, _, _){
 		this.isMouseDown = false;
@@ -368,7 +368,7 @@ class Main extends snow.App{
 		mousePointKnown = true;
 	}
 
-	inline function updateLastMouse(){
+	function updateLastMouse(){
 		lastMouse.set(mouse.x, mouse.y);
 		lastMouseFluid.set(
 			fluid.clipToAspectSpaceX(windowToClipSpaceX(mouse.x)),
@@ -380,7 +380,7 @@ class Main extends snow.App{
 	// override function ontouchdown(x:Float,y:Float,touch_id:Int,_){
 	// 	updateTouchCoordinate(x,y);
 	// 	updateLastMouse();
-	// 	this.isMouseDown = true; 
+	// 	this.isMouseDown = true;
 	// }
 
 	// override function ontouchup(x:Float,y:Float,touch_id:Int,_){
@@ -409,13 +409,13 @@ class Main extends snow.App{
 	var rshiftDown = false;
 	override function onkeydown( keyCode : Int, _, _, _, _, _){
 		switch (keyCode) {
-			case Key.lshift: 
+			case Key.lshift:
 				lshiftDown = true;
-			case Key.rshift: 
+			case Key.rshift:
 				rshiftDown = true;
 		}
 	}
-	
+
 	override function onkeyup( keyCode : Int , _, _, _, _, _){
 		switch (keyCode) {
 			case Key.key_r:
@@ -427,9 +427,9 @@ class Main extends snow.App{
 				renderFluidEnabled = !renderFluidEnabled;
 			case Key.key_s:
 				fluid.clear();
-			case Key.lshift: 
+			case Key.lshift:
 				lshiftDown = false;
-			case Key.rshift: 
+			case Key.rshift:
 				rshiftDown = false;
 		}
 	}
@@ -478,9 +478,9 @@ class ColorParticleMotion extends GPUParticles.RenderParticles{}
 		color.g *= (0.9494);
 		color.b *= (0.9696);
 
-		if(isMouseDown){			
+		if(isMouseDown){
 			vec2 mouseVelocity = (mouse - lastMouse)/dt;
-			
+
 			//compute tapered distance to mouse line segment
 			float projection;
 			float l = distanceToSegment(mouse, lastMouse, p, projection);
@@ -488,7 +488,7 @@ class ColorParticleMotion extends GPUParticles.RenderParticles{}
 			float projectedFraction = 1.0 - clamp(projection, 0.0, 1.0)*taperFactor;
 			float R = 0.025;
 			float m = exp(-l/R);
-			
+
 			float speed = length(mouseVelocity);
 			float x = clamp((speed * speed * 0.02 - l * 5.0) * projectedFraction, 0., 1.);
 			color.rgb += m * (
@@ -513,7 +513,7 @@ class MouseDye extends GPUFluid.UpdateDye{}
 		if(isMouseDown){
 			vec2 mouseVelocity = -(lastMouse - mouse)/dt;
 			// mouse = mouse - (lastMouse - mouse) * 2.0;//predict mouse position
-				
+
 			//compute tapered distance to mouse line segment
 			float projection;
 			float l = distanceToSegment(mouse, lastMouse, p, projection);
