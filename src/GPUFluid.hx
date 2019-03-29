@@ -62,21 +62,21 @@ class GPUFluid{
 			filter: GL.NEAREST
 		});
 
-		velocityRenderTarget = new RenderTarget2Phase(width, height, 
+		velocityRenderTarget = new RenderTarget2Phase(width, height,
 			gltoolbox.TextureTools.createTextureFactory({
-				channelType: GL.RGB, 
-				dataType: GL.FLOAT, 
+				channelType: GL.RGB,
+				dataType: GL.FLOAT,
 				filter: texture_float_linear_supported ? GL.LINEAR : GL.NEAREST
 			})
 		);
 		pressureRenderTarget = new RenderTarget2Phase(width, height, nearestFactory);
 		divergenceRenderTarget = new RenderTarget(width, height, nearestFactory);
-		dyeRenderTarget = new RenderTarget2Phase( 
+		dyeRenderTarget = new RenderTarget2Phase(
 			width,
 			height,
 			gltoolbox.TextureTools.createTextureFactory({
-				channelType: GL.RGB, 
-				dataType: GL.FLOAT, 
+				channelType: GL.RGB,
+				dataType: GL.FLOAT,
 				filter: texture_float_linear_supported ? GL.LINEAR : GL.NEAREST
 			})
 		);
@@ -106,7 +106,7 @@ class GPUFluid{
 		advect(dyeRenderTarget, dt);
 	}
 
-	public inline function resize(width:Int, height:Int){
+	public function resize(width:Int, height:Int){
 		velocityRenderTarget.resize(width, height);
 		pressureRenderTarget.resize(width, height);
 		divergenceRenderTarget.resize(width, height);
@@ -115,13 +115,13 @@ class GPUFluid{
 		this.height = height;
 	}
 
-	public inline function clear(){
+	public function clear(){
 		velocityRenderTarget.clear(GL.COLOR_BUFFER_BIT);
 		pressureRenderTarget.clear(GL.COLOR_BUFFER_BIT);
 		dyeRenderTarget.clear(GL.COLOR_BUFFER_BIT);
 	}
 
-	public inline function advect(target:RenderTarget2Phase, dt:Float){
+	public function advect(target:RenderTarget2Phase, dt:Float){
 		advectShader.dt.set(dt);
 		//set velocity and texture to be advected
 		advectShader.target.set(target.readFromTexture);
@@ -132,7 +132,7 @@ class GPUFluid{
 		target.swap();
 	}
 
-	inline function applyForces(dt:Float){
+	function applyForces(dt:Float){
 		if(applyForcesShader == null)return;
 		//set uniforms
 		applyForcesShader.dt.set(dt);
@@ -142,12 +142,12 @@ class GPUFluid{
 		velocityRenderTarget.swap();
 	}
 
-	inline function computeDivergence(){
+	function computeDivergence(){
 		divergenceShader.velocity.set(velocityRenderTarget.readFromTexture);
 		renderShaderTo(divergenceShader, divergenceRenderTarget);
 	}
 
-	inline function solvePressure(){
+	function solvePressure(){
 		pressureSolveShader.divergence.set(divergenceRenderTarget.texture);
 		pressureSolveShader.activate(true, true);
 
@@ -159,11 +159,11 @@ class GPUFluid{
 			GL.drawArrays(GL.TRIANGLE_STRIP, 0, 4);
 			pressureRenderTarget.swap();
 		}
-		
+
 		pressureSolveShader.deactivate();
 	}
 
-	inline function subtractPressureGradient(){
+	function subtractPressureGradient(){
 		pressureGradientSubstractShader.pressure.set(pressureRenderTarget.readFromTexture);
 		pressureGradientSubstractShader.velocity.set(velocityRenderTarget.readFromTexture);
 
@@ -171,7 +171,7 @@ class GPUFluid{
 		velocityRenderTarget.swap();
 	}
 
-	inline function updateDye(dt:Float){
+	function updateDye(dt:Float){
 		if(updateDyeShader==null) return;
 		//set uniforms
 		updateDyeShader.dt.set(dt);
@@ -181,14 +181,14 @@ class GPUFluid{
 		dyeRenderTarget.swap();
 	}
 
-	inline function renderShaderTo(shader:ShaderBase, target:gltoolbox.render.ITargetable){
+	function renderShaderTo(shader:ShaderBase, target:gltoolbox.render.ITargetable){
 		shader.activate(true, true);
 		target.activate();
 		GL.drawArrays(GL.TRIANGLE_STRIP, 0, 4);
 		shader.deactivate();
 	}
 
-	inline function updateCoreShaderUniforms(shader:FluidBase){
+	function updateCoreShaderUniforms(shader:FluidBase){
 		if(shader==null) return;
 		//set uniforms
 		shader.aspectRatio.set(this.aspectRatio);
@@ -196,33 +196,33 @@ class GPUFluid{
 		shader.invresolution.data.y = 1/this.height;
 	}
 
-	inline function set_applyForcesShader(v:ApplyForces):ApplyForces{
+	function set_applyForcesShader(v:ApplyForces):ApplyForces{
 		this.applyForcesShader = v;
 		this.applyForcesShader.dx.data = this.cellSize;
 		updateCoreShaderUniforms(this.applyForcesShader);
 		return this.applyForcesShader;
 	}
 
-	inline function set_updateDyeShader(v:UpdateDye):UpdateDye{
+	function set_updateDyeShader(v:UpdateDye):UpdateDye{
 		this.updateDyeShader = v;
 		this.updateDyeShader.dx.data = this.cellSize;
 		updateCoreShaderUniforms(this.updateDyeShader);
 		return this.updateDyeShader;
 	}
 
-	inline function set_cellSize(v:Float):Float{
+	function set_cellSize(v:Float):Float{
 		//shader specific
 		cellSize = v;
 		advectShader.rdx.set(1/cellSize);
 		divergenceShader.halfrdx.set(0.5*(1/cellSize));
 		pressureGradientSubstractShader.halfrdx.set(0.5*(1/cellSize));
 		pressureSolveShader.alpha.set(-cellSize*cellSize);
-		return cellSize; 
+		return cellSize;
 	}
 
 	//Coordinate conversions
-	public inline function clipToAspectSpaceX(clipX:Float) return clipX * aspectRatio;
-	public inline function clipToAspectSpaceY(clipY:Float) return clipY;
+	public function clipToAspectSpaceX(clipX:Float) return clipX * aspectRatio;
+	public function clipToAspectSpaceY(clipY:Float) return clipY;
 }
 
 @:vert('#pragma include("src/shaders/glsl/fluid/texel-space.vert")')

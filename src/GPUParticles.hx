@@ -62,7 +62,7 @@ class GPUParticles{
 		reset();
 	}
 
-	public inline function step(dt:Float){
+	public function step(dt:Float){
 		//set position and velocity uniforms
 		stepParticlesShader.dt.data = dt;
 
@@ -70,7 +70,7 @@ class GPUParticles{
 		renderShaderTo(stepParticlesShader, particleData);
 	}
 
-	public inline function reset(){
+	public function reset(){
 		renderShaderTo(inititalConditionsShader, particleData);
 	}
 
@@ -108,7 +108,7 @@ class GPUParticles{
 		return this.count = newCount;
 	}
 
-	inline function renderShaderTo(shader:ShaderBase, target:RenderTarget2Phase){
+	function renderShaderTo(shader:ShaderBase, target:RenderTarget2Phase){
 		GL.viewport(0, 0, target.width, target.height);
 		GL.bindFramebuffer(GL.FRAMEBUFFER, target.writeFrameBufferObject);
 
@@ -121,15 +121,15 @@ class GPUParticles{
 		target.swap();
 	}
 
-	inline function get_dragCoefficient()   return stepParticlesShader.dragCoefficient.data;
-	inline function get_flowScaleX()         return stepParticlesShader.flowScale.data.x;
-	inline function get_flowScaleY()         return stepParticlesShader.flowScale.data.y;
-	inline function get_flowVelocityField() return stepParticlesShader.flowVelocityField.data;
+	function get_dragCoefficient()   return stepParticlesShader.dragCoefficient.data;
+	function get_flowScaleX()         return stepParticlesShader.flowScale.data.x;
+	function get_flowScaleY()         return stepParticlesShader.flowScale.data.y;
+	function get_flowVelocityField() return stepParticlesShader.flowVelocityField.data;
 
-	inline function set_dragCoefficient(v:Float)       return stepParticlesShader.dragCoefficient.data = v;
-	inline function set_flowScaleX(v:Float)             return stepParticlesShader.flowScale.data.x = v;
-	inline function set_flowScaleY(v:Float)             return stepParticlesShader.flowScale.data.y = v;
-	inline function set_flowVelocityField(v:GLTexture){
+	function set_dragCoefficient(v:Float)       return stepParticlesShader.dragCoefficient.data = v;
+	function set_flowScaleX(v:Float)             return stepParticlesShader.flowScale.data.x = v;
+	function set_flowScaleY(v:Float)             return stepParticlesShader.flowScale.data.y = v;
+	function set_flowVelocityField(v:GLTexture){
 		return stepParticlesShader.flowVelocityField.data = v;
 	}
 }
@@ -140,7 +140,7 @@ class GPUParticles{
 
 	void main(){
 		texelCoord = vertexPosition;
-		gl_Position = vec4(vertexPosition*2.0 - vec2(1.0, 1.0), 0.0, 1.0 );//converts to clip space	
+		gl_Position = vec4(vertexPosition*2.0 - vec2(1.0, 1.0), 0.0, 1.0 );//converts to clip space
 	}
 ')
 @:frag('
@@ -185,7 +185,7 @@ class StepParticles extends ParticleBase{}
 	uniform sampler2D particleData;
 	attribute vec2 particleUV;
 	varying vec4 color;
-	
+
 	void main(){
 		vec2 p = texture2D(particleData, particleUV).xy;
 		vec2 v = texture2D(particleData, particleUV).zw;

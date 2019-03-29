@@ -64,19 +64,7 @@ var GPUFluid = function(width,height,cellSize,solverIterations) {
 	this.height = height;
 	this.solverIterations = solverIterations;
 	this.aspectRatio = this.width / this.height;
-	this.cellSize = cellSize;
-	var _this = this.advectShader.rdx;
-	_this.dirty = true;
-	_this.data = 1 / this.cellSize;
-	var _this1 = this.divergenceShader.halfrdx;
-	_this1.dirty = true;
-	_this1.data = 0.5 * (1 / this.cellSize);
-	var _this2 = this.pressureGradientSubstractShader.halfrdx;
-	_this2.dirty = true;
-	_this2.data = 0.5 * (1 / this.cellSize);
-	var _this3 = this.pressureSolveShader.alpha;
-	_this3.dirty = true;
-	_this3.data = -this.cellSize * this.cellSize;
+	this.set_cellSize(cellSize);
 	var texture_float_linear_supported = true;
 	if(snow_modules_opengl_web_GL.gl.getExtension("OES_texture_float_linear") == null) {
 		texture_float_linear_supported = false;
@@ -96,38 +84,10 @@ var GPUFluid = function(width,height,cellSize,solverIterations) {
 	this.dyeRenderTarget = new gltoolbox_render_RenderTarget2Phase(width,height,function(width3,height3) {
 		return gltoolbox_TextureTools.createTexture(width3,height3,params1);
 	});
-	var shader = this.advectShader;
-	if(shader != null) {
-		var _this4 = shader.aspectRatio;
-		_this4.dirty = true;
-		_this4.data = this.aspectRatio;
-		shader.invresolution.data.x = 1 / this.width;
-		shader.invresolution.data.y = 1 / this.height;
-	}
-	var shader1 = this.divergenceShader;
-	if(shader1 != null) {
-		var _this5 = shader1.aspectRatio;
-		_this5.dirty = true;
-		_this5.data = this.aspectRatio;
-		shader1.invresolution.data.x = 1 / this.width;
-		shader1.invresolution.data.y = 1 / this.height;
-	}
-	var shader2 = this.pressureSolveShader;
-	if(shader2 != null) {
-		var _this6 = shader2.aspectRatio;
-		_this6.dirty = true;
-		_this6.data = this.aspectRatio;
-		shader2.invresolution.data.x = 1 / this.width;
-		shader2.invresolution.data.y = 1 / this.height;
-	}
-	var shader3 = this.pressureGradientSubstractShader;
-	if(shader3 != null) {
-		var _this7 = shader3.aspectRatio;
-		_this7.dirty = true;
-		_this7.data = this.aspectRatio;
-		shader3.invresolution.data.x = 1 / this.width;
-		shader3.invresolution.data.y = 1 / this.height;
-	}
+	this.updateCoreShaderUniforms(this.advectShader);
+	this.updateCoreShaderUniforms(this.divergenceShader);
+	this.updateCoreShaderUniforms(this.pressureSolveShader);
+	this.updateCoreShaderUniforms(this.pressureGradientSubstractShader);
 };
 $hxClasses["GPUFluid"] = GPUFluid;
 GPUFluid.__name__ = ["GPUFluid"];
@@ -135,477 +95,13 @@ GPUFluid.prototype = {
 	step: function(dt) {
 		snow_modules_opengl_web_GL.gl.viewport(0,0,this.width,this.height);
 		snow_modules_opengl_web_GL.gl.bindBuffer(34962,this.textureQuad);
-		var target = this.velocityRenderTarget;
-		var _this = this.advectShader.dt;
-		_this.dirty = true;
-		_this.data = dt;
-		var _this1 = this.advectShader.target;
-		_this1.dirty = true;
-		_this1.data = target.readFromTexture;
-		var _this2 = this.advectShader.velocity;
-		_this2.dirty = true;
-		_this2.data = this.velocityRenderTarget.readFromTexture;
-		var shader = this.advectShader;
-		if(shader._active) {
-			var _g = 0;
-			var _g1 = shader._uniforms;
-			while(_g < _g1.length) {
-				var u = _g1[_g];
-				++_g;
-				u.apply();
-			}
-			var offset = 0;
-			var _g11 = 0;
-			var _g2 = shader._attributes.length;
-			while(_g11 < _g2) {
-				var i = _g11++;
-				var att = shader._attributes[i];
-				var location = att.location;
-				if(location != -1) {
-					snow_modules_opengl_web_GL.gl.enableVertexAttribArray(location);
-					snow_modules_opengl_web_GL.gl.vertexAttribPointer(location,att.itemCount,att.type,false,shader._aStride,offset);
-				}
-				offset += att.byteSize;
-			}
-		} else {
-			if(!shader._ready) {
-				shader.create();
-			}
-			snow_modules_opengl_web_GL.gl.useProgram(shader._prog);
-			var _g3 = 0;
-			var _g12 = shader._uniforms;
-			while(_g3 < _g12.length) {
-				var u1 = _g12[_g3];
-				++_g3;
-				u1.apply();
-			}
-			var offset1 = 0;
-			var _g13 = 0;
-			var _g4 = shader._attributes.length;
-			while(_g13 < _g4) {
-				var i1 = _g13++;
-				var att1 = shader._attributes[i1];
-				var location1 = att1.location;
-				if(location1 != -1) {
-					snow_modules_opengl_web_GL.gl.enableVertexAttribArray(location1);
-					snow_modules_opengl_web_GL.gl.vertexAttribPointer(location1,att1.itemCount,att1.type,false,shader._aStride,offset1);
-				}
-				offset1 += att1.byteSize;
-			}
-			shader._active = true;
-		}
-		target.activate();
-		snow_modules_opengl_web_GL.gl.drawArrays(5,0,4);
-		shader.deactivate();
-		target.tmpFBO = target.writeFrameBufferObject;
-		target.writeFrameBufferObject = target.readFrameBufferObject;
-		target.readFrameBufferObject = target.tmpFBO;
-		target.tmpTex = target.writeToTexture;
-		target.writeToTexture = target.readFromTexture;
-		target.readFromTexture = target.tmpTex;
-		if(this.applyForcesShader != null) {
-			var _this3 = this.applyForcesShader.dt;
-			_this3.dirty = true;
-			_this3.data = dt;
-			var _this4 = this.applyForcesShader.velocity;
-			_this4.dirty = true;
-			_this4.data = this.velocityRenderTarget.readFromTexture;
-			var shader1 = this.applyForcesShader;
-			var target1 = this.velocityRenderTarget;
-			if(shader1._active) {
-				var _g5 = 0;
-				var _g14 = shader1._uniforms;
-				while(_g5 < _g14.length) {
-					var u2 = _g14[_g5];
-					++_g5;
-					u2.apply();
-				}
-				var offset2 = 0;
-				var _g15 = 0;
-				var _g6 = shader1._attributes.length;
-				while(_g15 < _g6) {
-					var i2 = _g15++;
-					var att2 = shader1._attributes[i2];
-					var location2 = att2.location;
-					if(location2 != -1) {
-						snow_modules_opengl_web_GL.gl.enableVertexAttribArray(location2);
-						snow_modules_opengl_web_GL.gl.vertexAttribPointer(location2,att2.itemCount,att2.type,false,shader1._aStride,offset2);
-					}
-					offset2 += att2.byteSize;
-				}
-			} else {
-				if(!shader1._ready) {
-					shader1.create();
-				}
-				snow_modules_opengl_web_GL.gl.useProgram(shader1._prog);
-				var _g7 = 0;
-				var _g16 = shader1._uniforms;
-				while(_g7 < _g16.length) {
-					var u3 = _g16[_g7];
-					++_g7;
-					u3.apply();
-				}
-				var offset3 = 0;
-				var _g17 = 0;
-				var _g8 = shader1._attributes.length;
-				while(_g17 < _g8) {
-					var i3 = _g17++;
-					var att3 = shader1._attributes[i3];
-					var location3 = att3.location;
-					if(location3 != -1) {
-						snow_modules_opengl_web_GL.gl.enableVertexAttribArray(location3);
-						snow_modules_opengl_web_GL.gl.vertexAttribPointer(location3,att3.itemCount,att3.type,false,shader1._aStride,offset3);
-					}
-					offset3 += att3.byteSize;
-				}
-				shader1._active = true;
-			}
-			target1.activate();
-			snow_modules_opengl_web_GL.gl.drawArrays(5,0,4);
-			shader1.deactivate();
-			var _this5 = this.velocityRenderTarget;
-			_this5.tmpFBO = _this5.writeFrameBufferObject;
-			_this5.writeFrameBufferObject = _this5.readFrameBufferObject;
-			_this5.readFrameBufferObject = _this5.tmpFBO;
-			_this5.tmpTex = _this5.writeToTexture;
-			_this5.writeToTexture = _this5.readFromTexture;
-			_this5.readFromTexture = _this5.tmpTex;
-		}
-		var _this6 = this.divergenceShader.velocity;
-		_this6.dirty = true;
-		_this6.data = this.velocityRenderTarget.readFromTexture;
-		var shader2 = this.divergenceShader;
-		var target2 = this.divergenceRenderTarget;
-		if(shader2._active) {
-			var _g9 = 0;
-			var _g18 = shader2._uniforms;
-			while(_g9 < _g18.length) {
-				var u4 = _g18[_g9];
-				++_g9;
-				u4.apply();
-			}
-			var offset4 = 0;
-			var _g19 = 0;
-			var _g10 = shader2._attributes.length;
-			while(_g19 < _g10) {
-				var i4 = _g19++;
-				var att4 = shader2._attributes[i4];
-				var location4 = att4.location;
-				if(location4 != -1) {
-					snow_modules_opengl_web_GL.gl.enableVertexAttribArray(location4);
-					snow_modules_opengl_web_GL.gl.vertexAttribPointer(location4,att4.itemCount,att4.type,false,shader2._aStride,offset4);
-				}
-				offset4 += att4.byteSize;
-			}
-		} else {
-			if(!shader2._ready) {
-				shader2.create();
-			}
-			snow_modules_opengl_web_GL.gl.useProgram(shader2._prog);
-			var _g20 = 0;
-			var _g110 = shader2._uniforms;
-			while(_g20 < _g110.length) {
-				var u5 = _g110[_g20];
-				++_g20;
-				u5.apply();
-			}
-			var offset5 = 0;
-			var _g111 = 0;
-			var _g21 = shader2._attributes.length;
-			while(_g111 < _g21) {
-				var i5 = _g111++;
-				var att5 = shader2._attributes[i5];
-				var location5 = att5.location;
-				if(location5 != -1) {
-					snow_modules_opengl_web_GL.gl.enableVertexAttribArray(location5);
-					snow_modules_opengl_web_GL.gl.vertexAttribPointer(location5,att5.itemCount,att5.type,false,shader2._aStride,offset5);
-				}
-				offset5 += att5.byteSize;
-			}
-			shader2._active = true;
-		}
-		target2.activate();
-		snow_modules_opengl_web_GL.gl.drawArrays(5,0,4);
-		shader2.deactivate();
-		var _this7 = this.pressureSolveShader.divergence;
-		_this7.dirty = true;
-		_this7.data = this.divergenceRenderTarget.texture;
-		var _this8 = this.pressureSolveShader;
-		if(_this8._active) {
-			var _g22 = 0;
-			var _g112 = _this8._uniforms;
-			while(_g22 < _g112.length) {
-				var u6 = _g112[_g22];
-				++_g22;
-				u6.apply();
-			}
-			var offset6 = 0;
-			var _g113 = 0;
-			var _g23 = _this8._attributes.length;
-			while(_g113 < _g23) {
-				var i6 = _g113++;
-				var att6 = _this8._attributes[i6];
-				var location6 = att6.location;
-				if(location6 != -1) {
-					snow_modules_opengl_web_GL.gl.enableVertexAttribArray(location6);
-					snow_modules_opengl_web_GL.gl.vertexAttribPointer(location6,att6.itemCount,att6.type,false,_this8._aStride,offset6);
-				}
-				offset6 += att6.byteSize;
-			}
-		} else {
-			if(!_this8._ready) {
-				_this8.create();
-			}
-			snow_modules_opengl_web_GL.gl.useProgram(_this8._prog);
-			var _g24 = 0;
-			var _g114 = _this8._uniforms;
-			while(_g24 < _g114.length) {
-				var u7 = _g114[_g24];
-				++_g24;
-				u7.apply();
-			}
-			var offset7 = 0;
-			var _g115 = 0;
-			var _g25 = _this8._attributes.length;
-			while(_g115 < _g25) {
-				var i7 = _g115++;
-				var att7 = _this8._attributes[i7];
-				var location7 = att7.location;
-				if(location7 != -1) {
-					snow_modules_opengl_web_GL.gl.enableVertexAttribArray(location7);
-					snow_modules_opengl_web_GL.gl.vertexAttribPointer(location7,att7.itemCount,att7.type,false,_this8._aStride,offset7);
-				}
-				offset7 += att7.byteSize;
-			}
-			_this8._active = true;
-		}
-		var _g116 = 0;
-		var _g26 = this.solverIterations;
-		while(_g116 < _g26) {
-			var i8 = _g116++;
-			var _this9 = this.pressureSolveShader.pressure;
-			_this9.dirty = true;
-			_this9.data = this.pressureRenderTarget.readFromTexture;
-			var _g27 = 0;
-			var _g117 = this.pressureSolveShader._uniforms;
-			while(_g27 < _g117.length) {
-				var u8 = _g117[_g27];
-				++_g27;
-				u8.apply();
-			}
-			snow_modules_opengl_web_GL.gl.bindFramebuffer(36160,this.pressureRenderTarget.writeFrameBufferObject);
-			snow_modules_opengl_web_GL.gl.drawArrays(5,0,4);
-			var _this10 = this.pressureRenderTarget;
-			_this10.tmpFBO = _this10.writeFrameBufferObject;
-			_this10.writeFrameBufferObject = _this10.readFrameBufferObject;
-			_this10.readFrameBufferObject = _this10.tmpFBO;
-			_this10.tmpTex = _this10.writeToTexture;
-			_this10.writeToTexture = _this10.readFromTexture;
-			_this10.readFromTexture = _this10.tmpTex;
-		}
-		this.pressureSolveShader.deactivate();
-		var _this11 = this.pressureGradientSubstractShader.pressure;
-		_this11.dirty = true;
-		_this11.data = this.pressureRenderTarget.readFromTexture;
-		var _this12 = this.pressureGradientSubstractShader.velocity;
-		_this12.dirty = true;
-		_this12.data = this.velocityRenderTarget.readFromTexture;
-		var shader3 = this.pressureGradientSubstractShader;
-		var target3 = this.velocityRenderTarget;
-		if(shader3._active) {
-			var _g28 = 0;
-			var _g118 = shader3._uniforms;
-			while(_g28 < _g118.length) {
-				var u9 = _g118[_g28];
-				++_g28;
-				u9.apply();
-			}
-			var offset8 = 0;
-			var _g119 = 0;
-			var _g29 = shader3._attributes.length;
-			while(_g119 < _g29) {
-				var i9 = _g119++;
-				var att8 = shader3._attributes[i9];
-				var location8 = att8.location;
-				if(location8 != -1) {
-					snow_modules_opengl_web_GL.gl.enableVertexAttribArray(location8);
-					snow_modules_opengl_web_GL.gl.vertexAttribPointer(location8,att8.itemCount,att8.type,false,shader3._aStride,offset8);
-				}
-				offset8 += att8.byteSize;
-			}
-		} else {
-			if(!shader3._ready) {
-				shader3.create();
-			}
-			snow_modules_opengl_web_GL.gl.useProgram(shader3._prog);
-			var _g30 = 0;
-			var _g120 = shader3._uniforms;
-			while(_g30 < _g120.length) {
-				var u10 = _g120[_g30];
-				++_g30;
-				u10.apply();
-			}
-			var offset9 = 0;
-			var _g121 = 0;
-			var _g31 = shader3._attributes.length;
-			while(_g121 < _g31) {
-				var i10 = _g121++;
-				var att9 = shader3._attributes[i10];
-				var location9 = att9.location;
-				if(location9 != -1) {
-					snow_modules_opengl_web_GL.gl.enableVertexAttribArray(location9);
-					snow_modules_opengl_web_GL.gl.vertexAttribPointer(location9,att9.itemCount,att9.type,false,shader3._aStride,offset9);
-				}
-				offset9 += att9.byteSize;
-			}
-			shader3._active = true;
-		}
-		target3.activate();
-		snow_modules_opengl_web_GL.gl.drawArrays(5,0,4);
-		shader3.deactivate();
-		var _this13 = this.velocityRenderTarget;
-		_this13.tmpFBO = _this13.writeFrameBufferObject;
-		_this13.writeFrameBufferObject = _this13.readFrameBufferObject;
-		_this13.readFrameBufferObject = _this13.tmpFBO;
-		_this13.tmpTex = _this13.writeToTexture;
-		_this13.writeToTexture = _this13.readFromTexture;
-		_this13.readFromTexture = _this13.tmpTex;
-		if(this.updateDyeShader != null) {
-			var _this14 = this.updateDyeShader.dt;
-			_this14.dirty = true;
-			_this14.data = dt;
-			var _this15 = this.updateDyeShader.dye;
-			_this15.dirty = true;
-			_this15.data = this.dyeRenderTarget.readFromTexture;
-			var shader4 = this.updateDyeShader;
-			var target4 = this.dyeRenderTarget;
-			if(shader4._active) {
-				var _g32 = 0;
-				var _g122 = shader4._uniforms;
-				while(_g32 < _g122.length) {
-					var u11 = _g122[_g32];
-					++_g32;
-					u11.apply();
-				}
-				var offset10 = 0;
-				var _g123 = 0;
-				var _g33 = shader4._attributes.length;
-				while(_g123 < _g33) {
-					var i11 = _g123++;
-					var att10 = shader4._attributes[i11];
-					var location10 = att10.location;
-					if(location10 != -1) {
-						snow_modules_opengl_web_GL.gl.enableVertexAttribArray(location10);
-						snow_modules_opengl_web_GL.gl.vertexAttribPointer(location10,att10.itemCount,att10.type,false,shader4._aStride,offset10);
-					}
-					offset10 += att10.byteSize;
-				}
-			} else {
-				if(!shader4._ready) {
-					shader4.create();
-				}
-				snow_modules_opengl_web_GL.gl.useProgram(shader4._prog);
-				var _g34 = 0;
-				var _g124 = shader4._uniforms;
-				while(_g34 < _g124.length) {
-					var u12 = _g124[_g34];
-					++_g34;
-					u12.apply();
-				}
-				var offset11 = 0;
-				var _g125 = 0;
-				var _g35 = shader4._attributes.length;
-				while(_g125 < _g35) {
-					var i12 = _g125++;
-					var att11 = shader4._attributes[i12];
-					var location11 = att11.location;
-					if(location11 != -1) {
-						snow_modules_opengl_web_GL.gl.enableVertexAttribArray(location11);
-						snow_modules_opengl_web_GL.gl.vertexAttribPointer(location11,att11.itemCount,att11.type,false,shader4._aStride,offset11);
-					}
-					offset11 += att11.byteSize;
-				}
-				shader4._active = true;
-			}
-			target4.activate();
-			snow_modules_opengl_web_GL.gl.drawArrays(5,0,4);
-			shader4.deactivate();
-			var _this16 = this.dyeRenderTarget;
-			_this16.tmpFBO = _this16.writeFrameBufferObject;
-			_this16.writeFrameBufferObject = _this16.readFrameBufferObject;
-			_this16.readFrameBufferObject = _this16.tmpFBO;
-			_this16.tmpTex = _this16.writeToTexture;
-			_this16.writeToTexture = _this16.readFromTexture;
-			_this16.readFromTexture = _this16.tmpTex;
-		}
-		var target5 = this.dyeRenderTarget;
-		var _this17 = this.advectShader.dt;
-		_this17.dirty = true;
-		_this17.data = dt;
-		var _this18 = this.advectShader.target;
-		_this18.dirty = true;
-		_this18.data = target5.readFromTexture;
-		var _this19 = this.advectShader.velocity;
-		_this19.dirty = true;
-		_this19.data = this.velocityRenderTarget.readFromTexture;
-		var shader5 = this.advectShader;
-		if(shader5._active) {
-			var _g36 = 0;
-			var _g126 = shader5._uniforms;
-			while(_g36 < _g126.length) {
-				var u13 = _g126[_g36];
-				++_g36;
-				u13.apply();
-			}
-			var offset12 = 0;
-			var _g127 = 0;
-			var _g37 = shader5._attributes.length;
-			while(_g127 < _g37) {
-				var i13 = _g127++;
-				var att12 = shader5._attributes[i13];
-				var location12 = att12.location;
-				if(location12 != -1) {
-					snow_modules_opengl_web_GL.gl.enableVertexAttribArray(location12);
-					snow_modules_opengl_web_GL.gl.vertexAttribPointer(location12,att12.itemCount,att12.type,false,shader5._aStride,offset12);
-				}
-				offset12 += att12.byteSize;
-			}
-		} else {
-			if(!shader5._ready) {
-				shader5.create();
-			}
-			snow_modules_opengl_web_GL.gl.useProgram(shader5._prog);
-			var _g38 = 0;
-			var _g128 = shader5._uniforms;
-			while(_g38 < _g128.length) {
-				var u14 = _g128[_g38];
-				++_g38;
-				u14.apply();
-			}
-			var offset13 = 0;
-			var _g129 = 0;
-			var _g39 = shader5._attributes.length;
-			while(_g129 < _g39) {
-				var i14 = _g129++;
-				var att13 = shader5._attributes[i14];
-				var location13 = att13.location;
-				if(location13 != -1) {
-					snow_modules_opengl_web_GL.gl.enableVertexAttribArray(location13);
-					snow_modules_opengl_web_GL.gl.vertexAttribPointer(location13,att13.itemCount,att13.type,false,shader5._aStride,offset13);
-				}
-				offset13 += att13.byteSize;
-			}
-			shader5._active = true;
-		}
-		target5.activate();
-		snow_modules_opengl_web_GL.gl.drawArrays(5,0,4);
-		shader5.deactivate();
-		target5.tmpFBO = target5.writeFrameBufferObject;
-		target5.writeFrameBufferObject = target5.readFrameBufferObject;
-		target5.readFrameBufferObject = target5.tmpFBO;
-		target5.tmpTex = target5.writeToTexture;
-		target5.writeToTexture = target5.readFromTexture;
-		target5.readFromTexture = target5.tmpTex;
+		this.advect(this.velocityRenderTarget,dt);
+		this.applyForces(dt);
+		this.computeDivergence();
+		this.solvePressure();
+		this.subtractPressureGradient();
+		this.updateDye(dt);
+		this.advect(this.dyeRenderTarget,dt);
 	}
 	,resize: function(width,height) {
 		this.velocityRenderTarget.resize(width,height);
@@ -718,58 +214,7 @@ GPUFluid.prototype = {
 		var _this2 = this.advectShader.velocity;
 		_this2.dirty = true;
 		_this2.data = this.velocityRenderTarget.readFromTexture;
-		var shader = this.advectShader;
-		if(shader._active) {
-			var _g = 0;
-			var _g1 = shader._uniforms;
-			while(_g < _g1.length) {
-				var u = _g1[_g];
-				++_g;
-				u.apply();
-			}
-			var offset = 0;
-			var _g11 = 0;
-			var _g2 = shader._attributes.length;
-			while(_g11 < _g2) {
-				var i = _g11++;
-				var att = shader._attributes[i];
-				var location = att.location;
-				if(location != -1) {
-					snow_modules_opengl_web_GL.gl.enableVertexAttribArray(location);
-					snow_modules_opengl_web_GL.gl.vertexAttribPointer(location,att.itemCount,att.type,false,shader._aStride,offset);
-				}
-				offset += att.byteSize;
-			}
-		} else {
-			if(!shader._ready) {
-				shader.create();
-			}
-			snow_modules_opengl_web_GL.gl.useProgram(shader._prog);
-			var _g3 = 0;
-			var _g12 = shader._uniforms;
-			while(_g3 < _g12.length) {
-				var u1 = _g12[_g3];
-				++_g3;
-				u1.apply();
-			}
-			var offset1 = 0;
-			var _g13 = 0;
-			var _g4 = shader._attributes.length;
-			while(_g13 < _g4) {
-				var i1 = _g13++;
-				var att1 = shader._attributes[i1];
-				var location1 = att1.location;
-				if(location1 != -1) {
-					snow_modules_opengl_web_GL.gl.enableVertexAttribArray(location1);
-					snow_modules_opengl_web_GL.gl.vertexAttribPointer(location1,att1.itemCount,att1.type,false,shader._aStride,offset1);
-				}
-				offset1 += att1.byteSize;
-			}
-			shader._active = true;
-		}
-		target.activate();
-		snow_modules_opengl_web_GL.gl.drawArrays(5,0,4);
-		shader.deactivate();
+		this.renderShaderTo(this.advectShader,target);
 		target.tmpFBO = target.writeFrameBufferObject;
 		target.writeFrameBufferObject = target.readFrameBufferObject;
 		target.readFrameBufferObject = target.tmpFBO;
@@ -787,59 +232,7 @@ GPUFluid.prototype = {
 		var _this1 = this.applyForcesShader.velocity;
 		_this1.dirty = true;
 		_this1.data = this.velocityRenderTarget.readFromTexture;
-		var shader = this.applyForcesShader;
-		var target = this.velocityRenderTarget;
-		if(shader._active) {
-			var _g = 0;
-			var _g1 = shader._uniforms;
-			while(_g < _g1.length) {
-				var u = _g1[_g];
-				++_g;
-				u.apply();
-			}
-			var offset = 0;
-			var _g11 = 0;
-			var _g2 = shader._attributes.length;
-			while(_g11 < _g2) {
-				var i = _g11++;
-				var att = shader._attributes[i];
-				var location = att.location;
-				if(location != -1) {
-					snow_modules_opengl_web_GL.gl.enableVertexAttribArray(location);
-					snow_modules_opengl_web_GL.gl.vertexAttribPointer(location,att.itemCount,att.type,false,shader._aStride,offset);
-				}
-				offset += att.byteSize;
-			}
-		} else {
-			if(!shader._ready) {
-				shader.create();
-			}
-			snow_modules_opengl_web_GL.gl.useProgram(shader._prog);
-			var _g3 = 0;
-			var _g12 = shader._uniforms;
-			while(_g3 < _g12.length) {
-				var u1 = _g12[_g3];
-				++_g3;
-				u1.apply();
-			}
-			var offset1 = 0;
-			var _g13 = 0;
-			var _g4 = shader._attributes.length;
-			while(_g13 < _g4) {
-				var i1 = _g13++;
-				var att1 = shader._attributes[i1];
-				var location1 = att1.location;
-				if(location1 != -1) {
-					snow_modules_opengl_web_GL.gl.enableVertexAttribArray(location1);
-					snow_modules_opengl_web_GL.gl.vertexAttribPointer(location1,att1.itemCount,att1.type,false,shader._aStride,offset1);
-				}
-				offset1 += att1.byteSize;
-			}
-			shader._active = true;
-		}
-		target.activate();
-		snow_modules_opengl_web_GL.gl.drawArrays(5,0,4);
-		shader.deactivate();
+		this.renderShaderTo(this.applyForcesShader,this.velocityRenderTarget);
 		var _this2 = this.velocityRenderTarget;
 		_this2.tmpFBO = _this2.writeFrameBufferObject;
 		_this2.writeFrameBufferObject = _this2.readFrameBufferObject;
@@ -852,59 +245,7 @@ GPUFluid.prototype = {
 		var _this = this.divergenceShader.velocity;
 		_this.dirty = true;
 		_this.data = this.velocityRenderTarget.readFromTexture;
-		var shader = this.divergenceShader;
-		var target = this.divergenceRenderTarget;
-		if(shader._active) {
-			var _g = 0;
-			var _g1 = shader._uniforms;
-			while(_g < _g1.length) {
-				var u = _g1[_g];
-				++_g;
-				u.apply();
-			}
-			var offset = 0;
-			var _g11 = 0;
-			var _g2 = shader._attributes.length;
-			while(_g11 < _g2) {
-				var i = _g11++;
-				var att = shader._attributes[i];
-				var location = att.location;
-				if(location != -1) {
-					snow_modules_opengl_web_GL.gl.enableVertexAttribArray(location);
-					snow_modules_opengl_web_GL.gl.vertexAttribPointer(location,att.itemCount,att.type,false,shader._aStride,offset);
-				}
-				offset += att.byteSize;
-			}
-		} else {
-			if(!shader._ready) {
-				shader.create();
-			}
-			snow_modules_opengl_web_GL.gl.useProgram(shader._prog);
-			var _g3 = 0;
-			var _g12 = shader._uniforms;
-			while(_g3 < _g12.length) {
-				var u1 = _g12[_g3];
-				++_g3;
-				u1.apply();
-			}
-			var offset1 = 0;
-			var _g13 = 0;
-			var _g4 = shader._attributes.length;
-			while(_g13 < _g4) {
-				var i1 = _g13++;
-				var att1 = shader._attributes[i1];
-				var location1 = att1.location;
-				if(location1 != -1) {
-					snow_modules_opengl_web_GL.gl.enableVertexAttribArray(location1);
-					snow_modules_opengl_web_GL.gl.vertexAttribPointer(location1,att1.itemCount,att1.type,false,shader._aStride,offset1);
-				}
-				offset1 += att1.byteSize;
-			}
-			shader._active = true;
-		}
-		target.activate();
-		snow_modules_opengl_web_GL.gl.drawArrays(5,0,4);
-		shader.deactivate();
+		this.renderShaderTo(this.divergenceShader,this.divergenceRenderTarget);
 	}
 	,solvePressure: function() {
 		var _this = this.pressureSolveShader.divergence;
@@ -992,59 +333,7 @@ GPUFluid.prototype = {
 		var _this1 = this.pressureGradientSubstractShader.velocity;
 		_this1.dirty = true;
 		_this1.data = this.velocityRenderTarget.readFromTexture;
-		var shader = this.pressureGradientSubstractShader;
-		var target = this.velocityRenderTarget;
-		if(shader._active) {
-			var _g = 0;
-			var _g1 = shader._uniforms;
-			while(_g < _g1.length) {
-				var u = _g1[_g];
-				++_g;
-				u.apply();
-			}
-			var offset = 0;
-			var _g11 = 0;
-			var _g2 = shader._attributes.length;
-			while(_g11 < _g2) {
-				var i = _g11++;
-				var att = shader._attributes[i];
-				var location = att.location;
-				if(location != -1) {
-					snow_modules_opengl_web_GL.gl.enableVertexAttribArray(location);
-					snow_modules_opengl_web_GL.gl.vertexAttribPointer(location,att.itemCount,att.type,false,shader._aStride,offset);
-				}
-				offset += att.byteSize;
-			}
-		} else {
-			if(!shader._ready) {
-				shader.create();
-			}
-			snow_modules_opengl_web_GL.gl.useProgram(shader._prog);
-			var _g3 = 0;
-			var _g12 = shader._uniforms;
-			while(_g3 < _g12.length) {
-				var u1 = _g12[_g3];
-				++_g3;
-				u1.apply();
-			}
-			var offset1 = 0;
-			var _g13 = 0;
-			var _g4 = shader._attributes.length;
-			while(_g13 < _g4) {
-				var i1 = _g13++;
-				var att1 = shader._attributes[i1];
-				var location1 = att1.location;
-				if(location1 != -1) {
-					snow_modules_opengl_web_GL.gl.enableVertexAttribArray(location1);
-					snow_modules_opengl_web_GL.gl.vertexAttribPointer(location1,att1.itemCount,att1.type,false,shader._aStride,offset1);
-				}
-				offset1 += att1.byteSize;
-			}
-			shader._active = true;
-		}
-		target.activate();
-		snow_modules_opengl_web_GL.gl.drawArrays(5,0,4);
-		shader.deactivate();
+		this.renderShaderTo(this.pressureGradientSubstractShader,this.velocityRenderTarget);
 		var _this2 = this.velocityRenderTarget;
 		_this2.tmpFBO = _this2.writeFrameBufferObject;
 		_this2.writeFrameBufferObject = _this2.readFrameBufferObject;
@@ -1063,59 +352,7 @@ GPUFluid.prototype = {
 		var _this1 = this.updateDyeShader.dye;
 		_this1.dirty = true;
 		_this1.data = this.dyeRenderTarget.readFromTexture;
-		var shader = this.updateDyeShader;
-		var target = this.dyeRenderTarget;
-		if(shader._active) {
-			var _g = 0;
-			var _g1 = shader._uniforms;
-			while(_g < _g1.length) {
-				var u = _g1[_g];
-				++_g;
-				u.apply();
-			}
-			var offset = 0;
-			var _g11 = 0;
-			var _g2 = shader._attributes.length;
-			while(_g11 < _g2) {
-				var i = _g11++;
-				var att = shader._attributes[i];
-				var location = att.location;
-				if(location != -1) {
-					snow_modules_opengl_web_GL.gl.enableVertexAttribArray(location);
-					snow_modules_opengl_web_GL.gl.vertexAttribPointer(location,att.itemCount,att.type,false,shader._aStride,offset);
-				}
-				offset += att.byteSize;
-			}
-		} else {
-			if(!shader._ready) {
-				shader.create();
-			}
-			snow_modules_opengl_web_GL.gl.useProgram(shader._prog);
-			var _g3 = 0;
-			var _g12 = shader._uniforms;
-			while(_g3 < _g12.length) {
-				var u1 = _g12[_g3];
-				++_g3;
-				u1.apply();
-			}
-			var offset1 = 0;
-			var _g13 = 0;
-			var _g4 = shader._attributes.length;
-			while(_g13 < _g4) {
-				var i1 = _g13++;
-				var att1 = shader._attributes[i1];
-				var location1 = att1.location;
-				if(location1 != -1) {
-					snow_modules_opengl_web_GL.gl.enableVertexAttribArray(location1);
-					snow_modules_opengl_web_GL.gl.vertexAttribPointer(location1,att1.itemCount,att1.type,false,shader._aStride,offset1);
-				}
-				offset1 += att1.byteSize;
-			}
-			shader._active = true;
-		}
-		target.activate();
-		snow_modules_opengl_web_GL.gl.drawArrays(5,0,4);
-		shader.deactivate();
+		this.renderShaderTo(this.updateDyeShader,this.dyeRenderTarget);
 		var _this2 = this.dyeRenderTarget;
 		_this2.tmpFBO = _this2.writeFrameBufferObject;
 		_this2.writeFrameBufferObject = _this2.readFrameBufferObject;
@@ -1192,14 +429,7 @@ GPUFluid.prototype = {
 		var _this = this.applyForcesShader.dx;
 		_this.dirty = true;
 		_this.data = this.cellSize;
-		var shader = this.applyForcesShader;
-		if(shader != null) {
-			var _this1 = shader.aspectRatio;
-			_this1.dirty = true;
-			_this1.data = this.aspectRatio;
-			shader.invresolution.data.x = 1 / this.width;
-			shader.invresolution.data.y = 1 / this.height;
-		}
+		this.updateCoreShaderUniforms(this.applyForcesShader);
 		return this.applyForcesShader;
 	}
 	,set_updateDyeShader: function(v) {
@@ -1207,14 +437,7 @@ GPUFluid.prototype = {
 		var _this = this.updateDyeShader.dx;
 		_this.dirty = true;
 		_this.data = this.cellSize;
-		var shader = this.updateDyeShader;
-		if(shader != null) {
-			var _this1 = shader.aspectRatio;
-			_this1.dirty = true;
-			_this1.data = this.aspectRatio;
-			shader.invresolution.data.x = 1 / this.width;
-			shader.invresolution.data.y = 1 / this.height;
-		}
+		this.updateCoreShaderUniforms(this.updateDyeShader);
 		return this.updateDyeShader;
 	}
 	,set_cellSize: function(v) {
@@ -2409,73 +1632,11 @@ var GPUParticles = function(count) {
 	this.textureQuad = gltoolbox_GeometryTools.getCachedUnitQuad();
 	this.inititalConditionsShader = new InitialConditions();
 	this.stepParticlesShader = new StepParticles();
-	var _this = this.stepParticlesShader.dragCoefficient;
-	_this.dirty = true;
-	_this.data = 1;
-	this.stepParticlesShader.flowScale.data.x = 1;
-	this.stepParticlesShader.flowScale.data.y = 1;
+	this.set_dragCoefficient(1);
+	this.set_flowScaleX(1);
+	this.set_flowScaleY(1);
 	this.setCount(count);
-	var shader = this.inititalConditionsShader;
-	var target = this.particleData;
-	snow_modules_opengl_web_GL.gl.viewport(0,0,target.width,target.height);
-	snow_modules_opengl_web_GL.gl.bindFramebuffer(36160,target.writeFrameBufferObject);
-	snow_modules_opengl_web_GL.gl.bindBuffer(34962,this.textureQuad);
-	if(shader._active) {
-		var _g = 0;
-		var _g1 = shader._uniforms;
-		while(_g < _g1.length) {
-			var u = _g1[_g];
-			++_g;
-			u.apply();
-		}
-		var offset = 0;
-		var _g11 = 0;
-		var _g2 = shader._attributes.length;
-		while(_g11 < _g2) {
-			var i = _g11++;
-			var att = shader._attributes[i];
-			var location = att.location;
-			if(location != -1) {
-				snow_modules_opengl_web_GL.gl.enableVertexAttribArray(location);
-				snow_modules_opengl_web_GL.gl.vertexAttribPointer(location,att.itemCount,att.type,false,shader._aStride,offset);
-			}
-			offset += att.byteSize;
-		}
-	} else {
-		if(!shader._ready) {
-			shader.create();
-		}
-		snow_modules_opengl_web_GL.gl.useProgram(shader._prog);
-		var _g3 = 0;
-		var _g12 = shader._uniforms;
-		while(_g3 < _g12.length) {
-			var u1 = _g12[_g3];
-			++_g3;
-			u1.apply();
-		}
-		var offset1 = 0;
-		var _g13 = 0;
-		var _g4 = shader._attributes.length;
-		while(_g13 < _g4) {
-			var i1 = _g13++;
-			var att1 = shader._attributes[i1];
-			var location1 = att1.location;
-			if(location1 != -1) {
-				snow_modules_opengl_web_GL.gl.enableVertexAttribArray(location1);
-				snow_modules_opengl_web_GL.gl.vertexAttribPointer(location1,att1.itemCount,att1.type,false,shader._aStride,offset1);
-			}
-			offset1 += att1.byteSize;
-		}
-		shader._active = true;
-	}
-	snow_modules_opengl_web_GL.gl.drawArrays(5,0,4);
-	shader.deactivate();
-	target.tmpFBO = target.writeFrameBufferObject;
-	target.writeFrameBufferObject = target.readFrameBufferObject;
-	target.readFrameBufferObject = target.tmpFBO;
-	target.tmpTex = target.writeToTexture;
-	target.writeToTexture = target.readFromTexture;
-	target.readFromTexture = target.tmpTex;
+	this.reset();
 };
 $hxClasses["GPUParticles"] = GPUParticles;
 GPUParticles.__name__ = ["GPUParticles"];
@@ -2487,130 +1648,10 @@ GPUParticles.prototype = {
 		var _this1 = this.stepParticlesShader.particleData;
 		_this1.dirty = true;
 		_this1.data = this.particleData.readFromTexture;
-		var shader = this.stepParticlesShader;
-		var target = this.particleData;
-		snow_modules_opengl_web_GL.gl.viewport(0,0,target.width,target.height);
-		snow_modules_opengl_web_GL.gl.bindFramebuffer(36160,target.writeFrameBufferObject);
-		snow_modules_opengl_web_GL.gl.bindBuffer(34962,this.textureQuad);
-		if(shader._active) {
-			var _g = 0;
-			var _g1 = shader._uniforms;
-			while(_g < _g1.length) {
-				var u = _g1[_g];
-				++_g;
-				u.apply();
-			}
-			var offset = 0;
-			var _g11 = 0;
-			var _g2 = shader._attributes.length;
-			while(_g11 < _g2) {
-				var i = _g11++;
-				var att = shader._attributes[i];
-				var location = att.location;
-				if(location != -1) {
-					snow_modules_opengl_web_GL.gl.enableVertexAttribArray(location);
-					snow_modules_opengl_web_GL.gl.vertexAttribPointer(location,att.itemCount,att.type,false,shader._aStride,offset);
-				}
-				offset += att.byteSize;
-			}
-		} else {
-			if(!shader._ready) {
-				shader.create();
-			}
-			snow_modules_opengl_web_GL.gl.useProgram(shader._prog);
-			var _g3 = 0;
-			var _g12 = shader._uniforms;
-			while(_g3 < _g12.length) {
-				var u1 = _g12[_g3];
-				++_g3;
-				u1.apply();
-			}
-			var offset1 = 0;
-			var _g13 = 0;
-			var _g4 = shader._attributes.length;
-			while(_g13 < _g4) {
-				var i1 = _g13++;
-				var att1 = shader._attributes[i1];
-				var location1 = att1.location;
-				if(location1 != -1) {
-					snow_modules_opengl_web_GL.gl.enableVertexAttribArray(location1);
-					snow_modules_opengl_web_GL.gl.vertexAttribPointer(location1,att1.itemCount,att1.type,false,shader._aStride,offset1);
-				}
-				offset1 += att1.byteSize;
-			}
-			shader._active = true;
-		}
-		snow_modules_opengl_web_GL.gl.drawArrays(5,0,4);
-		shader.deactivate();
-		target.tmpFBO = target.writeFrameBufferObject;
-		target.writeFrameBufferObject = target.readFrameBufferObject;
-		target.readFrameBufferObject = target.tmpFBO;
-		target.tmpTex = target.writeToTexture;
-		target.writeToTexture = target.readFromTexture;
-		target.readFromTexture = target.tmpTex;
+		this.renderShaderTo(this.stepParticlesShader,this.particleData);
 	}
 	,reset: function() {
-		var shader = this.inititalConditionsShader;
-		var target = this.particleData;
-		snow_modules_opengl_web_GL.gl.viewport(0,0,target.width,target.height);
-		snow_modules_opengl_web_GL.gl.bindFramebuffer(36160,target.writeFrameBufferObject);
-		snow_modules_opengl_web_GL.gl.bindBuffer(34962,this.textureQuad);
-		if(shader._active) {
-			var _g = 0;
-			var _g1 = shader._uniforms;
-			while(_g < _g1.length) {
-				var u = _g1[_g];
-				++_g;
-				u.apply();
-			}
-			var offset = 0;
-			var _g11 = 0;
-			var _g2 = shader._attributes.length;
-			while(_g11 < _g2) {
-				var i = _g11++;
-				var att = shader._attributes[i];
-				var location = att.location;
-				if(location != -1) {
-					snow_modules_opengl_web_GL.gl.enableVertexAttribArray(location);
-					snow_modules_opengl_web_GL.gl.vertexAttribPointer(location,att.itemCount,att.type,false,shader._aStride,offset);
-				}
-				offset += att.byteSize;
-			}
-		} else {
-			if(!shader._ready) {
-				shader.create();
-			}
-			snow_modules_opengl_web_GL.gl.useProgram(shader._prog);
-			var _g3 = 0;
-			var _g12 = shader._uniforms;
-			while(_g3 < _g12.length) {
-				var u1 = _g12[_g3];
-				++_g3;
-				u1.apply();
-			}
-			var offset1 = 0;
-			var _g13 = 0;
-			var _g4 = shader._attributes.length;
-			while(_g13 < _g4) {
-				var i1 = _g13++;
-				var att1 = shader._attributes[i1];
-				var location1 = att1.location;
-				if(location1 != -1) {
-					snow_modules_opengl_web_GL.gl.enableVertexAttribArray(location1);
-					snow_modules_opengl_web_GL.gl.vertexAttribPointer(location1,att1.itemCount,att1.type,false,shader._aStride,offset1);
-				}
-				offset1 += att1.byteSize;
-			}
-			shader._active = true;
-		}
-		snow_modules_opengl_web_GL.gl.drawArrays(5,0,4);
-		shader.deactivate();
-		target.tmpFBO = target.writeFrameBufferObject;
-		target.writeFrameBufferObject = target.readFrameBufferObject;
-		target.readFrameBufferObject = target.tmpFBO;
-		target.tmpTex = target.writeToTexture;
-		target.writeToTexture = target.readFromTexture;
-		target.readFromTexture = target.tmpTex;
+		this.renderShaderTo(this.inititalConditionsShader,this.particleData);
 	}
 	,setCount: function(newCount) {
 		var dataWidth = Math.ceil(Math.sqrt(newCount));
@@ -2840,13 +1881,11 @@ RenderParticles.prototype = $extend(shaderblox_ShaderBase.prototype,{
 		this._aStride += 8;
 	}
 	,initSources: function() {
-		this._vertSource = "\r\n#ifdef GL_ES\r\nprecision highp float;\r\nprecision highp sampler2D;\r\n#endif\n\nuniform sampler2D particleData;\n\tattribute vec2 particleUV;\n\tvarying vec4 color;\n\t\n\tvoid main(){\n\t\tvec2 p = texture2D(particleData, particleUV).xy;\n\t\tvec2 v = texture2D(particleData, particleUV).zw;\n\t\tgl_PointSize = 1.0;\n\t\tgl_Position = vec4(p, 0.0, 1.0);\n\n\t\tcolor = vec4(1.0, 1.0, 1.0, 1.0);\n\t}\n";
+		this._vertSource = "\r\n#ifdef GL_ES\r\nprecision highp float;\r\nprecision highp sampler2D;\r\n#endif\n\nuniform sampler2D particleData;\n\tattribute vec2 particleUV;\n\tvarying vec4 color;\n\n\tvoid main(){\n\t\tvec2 p = texture2D(particleData, particleUV).xy;\n\t\tvec2 v = texture2D(particleData, particleUV).zw;\n\t\tgl_PointSize = 1.0;\n\t\tgl_Position = vec4(p, 0.0, 1.0);\n\n\t\tcolor = vec4(1.0, 1.0, 1.0, 1.0);\n\t}\n";
 		this._fragSource = "\r\n#ifdef GL_ES\r\nprecision highp float;\r\nprecision highp sampler2D;\r\n#endif\n\nvarying vec4 color;\n\n\tvoid main(){\n\t\tgl_FragColor = vec4(color);\n\t}\n";
 	}
 	,__class__: RenderParticles
 });
-
-/* ----------------------------------------------------------------------------------- */
 var HxOverrides = function() { };
 $hxClasses["HxOverrides"] = HxOverrides;
 HxOverrides.__name__ = ["HxOverrides"];
@@ -3036,6 +2075,10 @@ snow_App.prototype = {
 	}
 	,ontickend: function() {
 	}
+	,onkeydown: function(keycode,scancode,repeat,mod,timestamp,window_id) {
+	}
+	,onkeyup: function(keycode,scancode,repeat,mod,timestamp,window_id) {
+	}
 	,ontextinput: function(text,start,length,type,timestamp,window_id) {
 	}
 	,onmousedown: function(x,y,button,timestamp,window_id) {
@@ -3051,6 +2094,14 @@ snow_App.prototype = {
 	,ontouchup: function(x,y,dx,dy,touch_id,timestamp) {
 	}
 	,ontouchmove: function(x,y,dx,dy,touch_id,timestamp) {
+	}
+	,ongamepadaxis: function(gamepad,axis,value,timestamp) {
+	}
+	,ongamepaddown: function(gamepad,button,value,timestamp) {
+	}
+	,ongamepadup: function(gamepad,button,value,timestamp) {
+	}
+	,ongamepaddevice: function(gamepad,id,type,timestamp) {
 	}
 	,internal_init: function() {
 		this.sim_time = 0;
@@ -3198,6 +2249,13 @@ Main.prototype = $extend(snow_App.prototype,{
 		snow_modules_opengl_web_GL.gl.disable(2884);
 		snow_modules_opengl_web_GL.gl.disable(3024);
 		this.textureQuad = gltoolbox_GeometryTools.createQuad(0,0,1,1);
+		if(Main.OFFSCREEN_RENDER) {
+			var params = { channelType : 6407, dataType : 5121, filter : this.offScreenFilter};
+			var tmp = function(width,height) {
+				return gltoolbox_TextureTools.createTexture(width,height,params);
+			};
+			this.offScreenTarget = new gltoolbox_render_RenderTarget(Math.round(this.app.runtime.window.width * this.offScreenScale),Math.round(this.app.runtime.window.height * this.offScreenScale),tmp);
+		}
 		this.screenTextureShader = new ScreenTexture();
 		this.renderParticlesShader = new ColorParticleMotion();
 		this.updateDyeShader = new MouseDye();
@@ -3216,38 +2274,12 @@ Main.prototype = $extend(snow_App.prototype,{
 		_this3.data = this.lastMouseFluid;
 		var cellScale = 32;
 		this.fluid = new GPUFluid(Math.round(this.app.runtime.window.width * this.fluidScale),Math.round(this.app.runtime.window.height * this.fluidScale),cellScale,this.fluidIterations);
-		var _this4 = this.fluid;
-		_this4.updateDyeShader = this.updateDyeShader;
-		var _this5 = _this4.updateDyeShader.dx;
-		_this5.dirty = true;
-		_this5.data = _this4.cellSize;
-		var shader = _this4.updateDyeShader;
-		if(shader != null) {
-			var _this6 = shader.aspectRatio;
-			_this6.dirty = true;
-			_this6.data = _this4.aspectRatio;
-			shader.invresolution.data.x = 1 / _this4.width;
-			shader.invresolution.data.y = 1 / _this4.height;
-		}
-		var _this7 = this.fluid;
-		_this7.applyForcesShader = this.mouseForceShader;
-		var _this8 = _this7.applyForcesShader.dx;
-		_this8.dirty = true;
-		_this8.data = _this7.cellSize;
-		var shader1 = _this7.applyForcesShader;
-		if(shader1 != null) {
-			var _this9 = shader1.aspectRatio;
-			_this9.dirty = true;
-			_this9.data = _this7.aspectRatio;
-			shader1.invresolution.data.x = 1 / _this7.width;
-			shader1.invresolution.data.y = 1 / _this7.height;
-		}
+		this.fluid.set_updateDyeShader(this.updateDyeShader);
+		this.fluid.set_applyForcesShader(this.mouseForceShader);
 		this.particles = new GPUParticles(this.particleCount);
-		this.particles.stepParticlesShader.flowScale.data.x = 1 / (this.fluid.cellSize * this.fluid.aspectRatio);
-		this.particles.stepParticlesShader.flowScale.data.y = 1 / this.fluid.cellSize;
-		var _this10 = this.particles.stepParticlesShader.dragCoefficient;
-		_this10.dirty = true;
-		_this10.data = 1;
+		this.particles.set_flowScaleX(1 / (this.fluid.cellSize * this.fluid.aspectRatio));
+		this.particles.set_flowScaleY(1 / this.fluid.cellSize);
+		this.particles.set_dragCoefficient(1);
 		this.lastTime = new Date().getTime() / 1000;
 	}
 	,update: function(dt) {
@@ -3259,212 +2291,37 @@ Main.prototype = $extend(snow_App.prototype,{
 		_this1.dirty = true;
 		_this1.data = this.isMouseDown && this.lastMousePointKnown;
 		this.fluid.step(dt);
-		var _this2 = this.particles.stepParticlesShader.flowVelocityField;
-		_this2.dirty = true;
-		_this2.data = this.fluid.velocityRenderTarget.readFromTexture;
+		this.particles.set_flowVelocityField(this.fluid.velocityRenderTarget.readFromTexture);
 		if(this.renderParticlesEnabled) {
-			var _this3 = this.particles;
-			var _this4 = _this3.stepParticlesShader.dt;
-			_this4.dirty = true;
-			_this4.data = dt;
-			var _this5 = _this3.stepParticlesShader.particleData;
-			_this5.dirty = true;
-			_this5.data = _this3.particleData.readFromTexture;
-			var shader = _this3.stepParticlesShader;
-			var target = _this3.particleData;
-			snow_modules_opengl_web_GL.gl.viewport(0,0,target.width,target.height);
-			snow_modules_opengl_web_GL.gl.bindFramebuffer(36160,target.writeFrameBufferObject);
-			snow_modules_opengl_web_GL.gl.bindBuffer(34962,_this3.textureQuad);
-			if(shader._active) {
-				var _g = 0;
-				var _g1 = shader._uniforms;
-				while(_g < _g1.length) {
-					var u = _g1[_g];
-					++_g;
-					u.apply();
-				}
-				var offset = 0;
-				var _g11 = 0;
-				var _g2 = shader._attributes.length;
-				while(_g11 < _g2) {
-					var i = _g11++;
-					var att = shader._attributes[i];
-					var location = att.location;
-					if(location != -1) {
-						snow_modules_opengl_web_GL.gl.enableVertexAttribArray(location);
-						snow_modules_opengl_web_GL.gl.vertexAttribPointer(location,att.itemCount,att.type,false,shader._aStride,offset);
-					}
-					offset += att.byteSize;
-				}
-			} else {
-				if(!shader._ready) {
-					shader.create();
-				}
-				snow_modules_opengl_web_GL.gl.useProgram(shader._prog);
-				var _g3 = 0;
-				var _g12 = shader._uniforms;
-				while(_g3 < _g12.length) {
-					var u1 = _g12[_g3];
-					++_g3;
-					u1.apply();
-				}
-				var offset1 = 0;
-				var _g13 = 0;
-				var _g4 = shader._attributes.length;
-				while(_g13 < _g4) {
-					var i1 = _g13++;
-					var att1 = shader._attributes[i1];
-					var location1 = att1.location;
-					if(location1 != -1) {
-						snow_modules_opengl_web_GL.gl.enableVertexAttribArray(location1);
-						snow_modules_opengl_web_GL.gl.vertexAttribPointer(location1,att1.itemCount,att1.type,false,shader._aStride,offset1);
-					}
-					offset1 += att1.byteSize;
-				}
-				shader._active = true;
-			}
-			snow_modules_opengl_web_GL.gl.drawArrays(5,0,4);
-			shader.deactivate();
-			target.tmpFBO = target.writeFrameBufferObject;
-			target.writeFrameBufferObject = target.readFrameBufferObject;
-			target.readFrameBufferObject = target.tmpFBO;
-			target.tmpTex = target.writeToTexture;
-			target.writeToTexture = target.readFromTexture;
-			target.readFromTexture = target.tmpTex;
+			this.particles.step(dt);
 		}
-		var _this6 = this.lastMouse;
-		_this6.x = this.mouse.x;
-		_this6.y = this.mouse.y;
-		var _this7 = this.lastMouseFluid;
-		var _this8 = this.fluid;
-		_this7.x = (this.mouse.x / this.app.runtime.window.width * 2 - 1) * this.fluid.aspectRatio;
-		_this7.y = (this.app.runtime.window.height - this.mouse.y) / this.app.runtime.window.height * 2 - 1;
-		this.lastMousePointKnown = this.mousePointKnown;
+		this.updateLastMouse();
 	}
 	,tick: function(delta) {
-		snow_modules_opengl_web_GL.gl.viewport(0,0,this.app.runtime.window.width,this.app.runtime.window.height);
-		snow_modules_opengl_web_GL.gl.bindFramebuffer(36160,this.screenBuffer);
+		if(Main.OFFSCREEN_RENDER) {
+			snow_modules_opengl_web_GL.gl.viewport(0,0,this.offScreenTarget.width,this.offScreenTarget.height);
+			snow_modules_opengl_web_GL.gl.bindFramebuffer(36160,this.offScreenTarget.frameBufferObject);
+		} else {
+			snow_modules_opengl_web_GL.gl.viewport(0,0,this.app.runtime.window.width,this.app.runtime.window.height);
+			snow_modules_opengl_web_GL.gl.bindFramebuffer(36160,this.screenBuffer);
+		}
 		snow_modules_opengl_web_GL.gl.clearColor(0,0,0,1);
 		snow_modules_opengl_web_GL.gl.clear(16384);
 		snow_modules_opengl_web_GL.gl.enable(3042);
 		snow_modules_opengl_web_GL.gl.blendFunc(770,770);
 		snow_modules_opengl_web_GL.gl.blendEquation(32774);
 		if(this.renderParticlesEnabled) {
-			snow_modules_opengl_web_GL.gl.bindBuffer(34962,this.particles.particleUVs);
-			var _this = this.renderParticlesShader.particleData;
-			_this.dirty = true;
-			_this.data = this.particles.particleData.readFromTexture;
-			var _this1 = this.renderParticlesShader;
-			if(_this1._active) {
-				var _g = 0;
-				var _g1 = _this1._uniforms;
-				while(_g < _g1.length) {
-					var u = _g1[_g];
-					++_g;
-					u.apply();
-				}
-				var offset = 0;
-				var _g11 = 0;
-				var _g2 = _this1._attributes.length;
-				while(_g11 < _g2) {
-					var i = _g11++;
-					var att = _this1._attributes[i];
-					var location = att.location;
-					if(location != -1) {
-						snow_modules_opengl_web_GL.gl.enableVertexAttribArray(location);
-						snow_modules_opengl_web_GL.gl.vertexAttribPointer(location,att.itemCount,att.type,false,_this1._aStride,offset);
-					}
-					offset += att.byteSize;
-				}
-			} else {
-				if(!_this1._ready) {
-					_this1.create();
-				}
-				snow_modules_opengl_web_GL.gl.useProgram(_this1._prog);
-				var _g3 = 0;
-				var _g12 = _this1._uniforms;
-				while(_g3 < _g12.length) {
-					var u1 = _g12[_g3];
-					++_g3;
-					u1.apply();
-				}
-				var offset1 = 0;
-				var _g13 = 0;
-				var _g4 = _this1._attributes.length;
-				while(_g13 < _g4) {
-					var i1 = _g13++;
-					var att1 = _this1._attributes[i1];
-					var location1 = att1.location;
-					if(location1 != -1) {
-						snow_modules_opengl_web_GL.gl.enableVertexAttribArray(location1);
-						snow_modules_opengl_web_GL.gl.vertexAttribPointer(location1,att1.itemCount,att1.type,false,_this1._aStride,offset1);
-					}
-					offset1 += att1.byteSize;
-				}
-				_this1._active = true;
-			}
-			snow_modules_opengl_web_GL.gl.drawArrays(0,0,this.particles.count);
-			this.renderParticlesShader.deactivate();
+			this.renderParticles();
 		}
 		if(this.renderFluidEnabled) {
-			var texture = this.fluid.dyeRenderTarget.readFromTexture;
-			snow_modules_opengl_web_GL.gl.bindBuffer(34962,this.textureQuad);
-			var _this2 = this.screenTextureShader.texture;
-			_this2.dirty = true;
-			_this2.data = texture;
-			var _this3 = this.screenTextureShader;
-			if(_this3._active) {
-				var _g5 = 0;
-				var _g14 = _this3._uniforms;
-				while(_g5 < _g14.length) {
-					var u2 = _g14[_g5];
-					++_g5;
-					u2.apply();
-				}
-				var offset2 = 0;
-				var _g15 = 0;
-				var _g6 = _this3._attributes.length;
-				while(_g15 < _g6) {
-					var i2 = _g15++;
-					var att2 = _this3._attributes[i2];
-					var location2 = att2.location;
-					if(location2 != -1) {
-						snow_modules_opengl_web_GL.gl.enableVertexAttribArray(location2);
-						snow_modules_opengl_web_GL.gl.vertexAttribPointer(location2,att2.itemCount,att2.type,false,_this3._aStride,offset2);
-					}
-					offset2 += att2.byteSize;
-				}
-			} else {
-				if(!_this3._ready) {
-					_this3.create();
-				}
-				snow_modules_opengl_web_GL.gl.useProgram(_this3._prog);
-				var _g7 = 0;
-				var _g16 = _this3._uniforms;
-				while(_g7 < _g16.length) {
-					var u3 = _g16[_g7];
-					++_g7;
-					u3.apply();
-				}
-				var offset3 = 0;
-				var _g17 = 0;
-				var _g8 = _this3._attributes.length;
-				while(_g17 < _g8) {
-					var i3 = _g17++;
-					var att3 = _this3._attributes[i3];
-					var location3 = att3.location;
-					if(location3 != -1) {
-						snow_modules_opengl_web_GL.gl.enableVertexAttribArray(location3);
-						snow_modules_opengl_web_GL.gl.vertexAttribPointer(location3,att3.itemCount,att3.type,false,_this3._aStride,offset3);
-					}
-					offset3 += att3.byteSize;
-				}
-				_this3._active = true;
-			}
-			snow_modules_opengl_web_GL.gl.drawArrays(5,0,4);
-			this.screenTextureShader.deactivate();
+			this.renderTexture(this.fluid.dyeRenderTarget.readFromTexture);
 		}
 		snow_modules_opengl_web_GL.gl.disable(3042);
+		if(Main.OFFSCREEN_RENDER) {
+			snow_modules_opengl_web_GL.gl.viewport(0,0,this.app.runtime.window.width,this.app.runtime.window.height);
+			snow_modules_opengl_web_GL.gl.bindFramebuffer(36160,this.screenBuffer);
+			this.renderTexture(this.offScreenTarget.texture);
+		}
 	}
 	,renderTexture: function(texture) {
 		snow_modules_opengl_web_GL.gl.bindBuffer(34962,this.textureQuad);
@@ -3586,19 +2443,21 @@ Main.prototype = $extend(snow_App.prototype,{
 		w = Math.round(this.app.runtime.window.width * this.fluidScale);
 		h = Math.round(this.app.runtime.window.height * this.fluidScale);
 		if(w != this.fluid.width || h != this.fluid.height) {
-			var _this = this.fluid;
-			_this.velocityRenderTarget.resize(w,h);
-			_this.pressureRenderTarget.resize(w,h);
-			var _this1 = _this.divergenceRenderTarget;
-			var newTexture = _this1.textureFactory(w,h);
-			snow_modules_opengl_web_GL.gl.bindFramebuffer(36160,_this1.frameBufferObject);
+			this.fluid.resize(w,h);
+		}
+		w = Math.round(this.app.runtime.window.width * this.offScreenScale);
+		h = Math.round(this.app.runtime.window.height * this.offScreenScale);
+		if(w != this.offScreenTarget.width || h != this.offScreenTarget.height) {
+			var _this = this.offScreenTarget;
+			var newTexture = _this.textureFactory(w,h);
+			snow_modules_opengl_web_GL.gl.bindFramebuffer(36160,_this.frameBufferObject);
 			snow_modules_opengl_web_GL.gl.framebufferTexture2D(36160,36064,3553,newTexture,0);
-			if(_this1.texture != null) {
+			if(_this.texture != null) {
 				var resampler = gltoolbox_shaders_Resample.instance;
-				var _this2 = resampler.texture;
-				_this2.dirty = true;
-				_this2.data = _this1.texture;
-				snow_modules_opengl_web_GL.gl.bindFramebuffer(36160,_this1.frameBufferObject);
+				var _this1 = resampler.texture;
+				_this1.dirty = true;
+				_this1.data = _this.texture;
+				snow_modules_opengl_web_GL.gl.bindFramebuffer(36160,_this.frameBufferObject);
 				snow_modules_opengl_web_GL.gl.viewport(0,0,w,h);
 				snow_modules_opengl_web_GL.gl.bindBuffer(34962,gltoolbox_render_RenderTarget.textureQuad);
 				if(resampler._active) {
@@ -3651,93 +2510,15 @@ Main.prototype = $extend(snow_App.prototype,{
 				}
 				snow_modules_opengl_web_GL.gl.drawArrays(5,0,4);
 				resampler.deactivate();
-				snow_modules_opengl_web_GL.gl.deleteTexture(_this1.texture);
+				snow_modules_opengl_web_GL.gl.deleteTexture(_this.texture);
 			} else {
-				snow_modules_opengl_web_GL.gl.bindFramebuffer(36160,_this1.frameBufferObject);
+				snow_modules_opengl_web_GL.gl.bindFramebuffer(36160,_this.frameBufferObject);
 				snow_modules_opengl_web_GL.gl.clearColor(0,0,0,1);
 				snow_modules_opengl_web_GL.gl.clear(16384);
 			}
-			_this1.width = w;
-			_this1.height = h;
-			_this1.texture = newTexture;
-			_this.dyeRenderTarget.resize(w,h);
 			_this.width = w;
 			_this.height = h;
-		}
-		w = Math.round(this.app.runtime.window.width * this.offScreenScale);
-		h = Math.round(this.app.runtime.window.height * this.offScreenScale);
-		if(w != this.offScreenTarget.width || h != this.offScreenTarget.height) {
-			var _this3 = this.offScreenTarget;
-			var newTexture1 = _this3.textureFactory(w,h);
-			snow_modules_opengl_web_GL.gl.bindFramebuffer(36160,_this3.frameBufferObject);
-			snow_modules_opengl_web_GL.gl.framebufferTexture2D(36160,36064,3553,newTexture1,0);
-			if(_this3.texture != null) {
-				var resampler1 = gltoolbox_shaders_Resample.instance;
-				var _this4 = resampler1.texture;
-				_this4.dirty = true;
-				_this4.data = _this3.texture;
-				snow_modules_opengl_web_GL.gl.bindFramebuffer(36160,_this3.frameBufferObject);
-				snow_modules_opengl_web_GL.gl.viewport(0,0,w,h);
-				snow_modules_opengl_web_GL.gl.bindBuffer(34962,gltoolbox_render_RenderTarget.textureQuad);
-				if(resampler1._active) {
-					var _g5 = 0;
-					var _g14 = resampler1._uniforms;
-					while(_g5 < _g14.length) {
-						var u2 = _g14[_g5];
-						++_g5;
-						u2.apply();
-					}
-					var offset2 = 0;
-					var _g15 = 0;
-					var _g6 = resampler1._attributes.length;
-					while(_g15 < _g6) {
-						var i2 = _g15++;
-						var att2 = resampler1._attributes[i2];
-						var location2 = att2.location;
-						if(location2 != -1) {
-							snow_modules_opengl_web_GL.gl.enableVertexAttribArray(location2);
-							snow_modules_opengl_web_GL.gl.vertexAttribPointer(location2,att2.itemCount,att2.type,false,resampler1._aStride,offset2);
-						}
-						offset2 += att2.byteSize;
-					}
-				} else {
-					if(!resampler1._ready) {
-						resampler1.create();
-					}
-					snow_modules_opengl_web_GL.gl.useProgram(resampler1._prog);
-					var _g7 = 0;
-					var _g16 = resampler1._uniforms;
-					while(_g7 < _g16.length) {
-						var u3 = _g16[_g7];
-						++_g7;
-						u3.apply();
-					}
-					var offset3 = 0;
-					var _g17 = 0;
-					var _g8 = resampler1._attributes.length;
-					while(_g17 < _g8) {
-						var i3 = _g17++;
-						var att3 = resampler1._attributes[i3];
-						var location3 = att3.location;
-						if(location3 != -1) {
-							snow_modules_opengl_web_GL.gl.enableVertexAttribArray(location3);
-							snow_modules_opengl_web_GL.gl.vertexAttribPointer(location3,att3.itemCount,att3.type,false,resampler1._aStride,offset3);
-						}
-						offset3 += att3.byteSize;
-					}
-					resampler1._active = true;
-				}
-				snow_modules_opengl_web_GL.gl.drawArrays(5,0,4);
-				resampler1.deactivate();
-				snow_modules_opengl_web_GL.gl.deleteTexture(_this3.texture);
-			} else {
-				snow_modules_opengl_web_GL.gl.bindFramebuffer(36160,_this3.frameBufferObject);
-				snow_modules_opengl_web_GL.gl.clearColor(0,0,0,1);
-				snow_modules_opengl_web_GL.gl.clear(16384);
-			}
-			_this3.width = w;
-			_this3.height = h;
-			_this3.texture = newTexture1;
+			_this.texture = newTexture;
 		}
 		if(this.particleCount != this.particles.count) {
 			this.particles.setCount(this.particleCount);
@@ -3844,90 +2625,8 @@ Main.prototype = $extend(snow_App.prototype,{
 		this.updateSimulationTextures();
 	}
 	,reset: function() {
-		var _this = this.particles;
-		var shader = _this.inititalConditionsShader;
-		var target = _this.particleData;
-		snow_modules_opengl_web_GL.gl.viewport(0,0,target.width,target.height);
-		snow_modules_opengl_web_GL.gl.bindFramebuffer(36160,target.writeFrameBufferObject);
-		snow_modules_opengl_web_GL.gl.bindBuffer(34962,_this.textureQuad);
-		if(shader._active) {
-			var _g = 0;
-			var _g1 = shader._uniforms;
-			while(_g < _g1.length) {
-				var u = _g1[_g];
-				++_g;
-				u.apply();
-			}
-			var offset = 0;
-			var _g11 = 0;
-			var _g2 = shader._attributes.length;
-			while(_g11 < _g2) {
-				var i = _g11++;
-				var att = shader._attributes[i];
-				var location = att.location;
-				if(location != -1) {
-					snow_modules_opengl_web_GL.gl.enableVertexAttribArray(location);
-					snow_modules_opengl_web_GL.gl.vertexAttribPointer(location,att.itemCount,att.type,false,shader._aStride,offset);
-				}
-				offset += att.byteSize;
-			}
-		} else {
-			if(!shader._ready) {
-				shader.create();
-			}
-			snow_modules_opengl_web_GL.gl.useProgram(shader._prog);
-			var _g3 = 0;
-			var _g12 = shader._uniforms;
-			while(_g3 < _g12.length) {
-				var u1 = _g12[_g3];
-				++_g3;
-				u1.apply();
-			}
-			var offset1 = 0;
-			var _g13 = 0;
-			var _g4 = shader._attributes.length;
-			while(_g13 < _g4) {
-				var i1 = _g13++;
-				var att1 = shader._attributes[i1];
-				var location1 = att1.location;
-				if(location1 != -1) {
-					snow_modules_opengl_web_GL.gl.enableVertexAttribArray(location1);
-					snow_modules_opengl_web_GL.gl.vertexAttribPointer(location1,att1.itemCount,att1.type,false,shader._aStride,offset1);
-				}
-				offset1 += att1.byteSize;
-			}
-			shader._active = true;
-		}
-		snow_modules_opengl_web_GL.gl.drawArrays(5,0,4);
-		shader.deactivate();
-		target.tmpFBO = target.writeFrameBufferObject;
-		target.writeFrameBufferObject = target.readFrameBufferObject;
-		target.readFrameBufferObject = target.tmpFBO;
-		target.tmpTex = target.writeToTexture;
-		target.writeToTexture = target.readFromTexture;
-		target.readFromTexture = target.tmpTex;
-		var _this1 = this.fluid;
-		var _this2 = _this1.velocityRenderTarget;
-		snow_modules_opengl_web_GL.gl.bindFramebuffer(36160,_this2.readFrameBufferObject);
-		snow_modules_opengl_web_GL.gl.clearColor(0,0,0,1);
-		snow_modules_opengl_web_GL.gl.clear(16384);
-		snow_modules_opengl_web_GL.gl.bindFramebuffer(36160,_this2.writeFrameBufferObject);
-		snow_modules_opengl_web_GL.gl.clearColor(0,0,0,1);
-		snow_modules_opengl_web_GL.gl.clear(16384);
-		var _this3 = _this1.pressureRenderTarget;
-		snow_modules_opengl_web_GL.gl.bindFramebuffer(36160,_this3.readFrameBufferObject);
-		snow_modules_opengl_web_GL.gl.clearColor(0,0,0,1);
-		snow_modules_opengl_web_GL.gl.clear(16384);
-		snow_modules_opengl_web_GL.gl.bindFramebuffer(36160,_this3.writeFrameBufferObject);
-		snow_modules_opengl_web_GL.gl.clearColor(0,0,0,1);
-		snow_modules_opengl_web_GL.gl.clear(16384);
-		var _this4 = _this1.dyeRenderTarget;
-		snow_modules_opengl_web_GL.gl.bindFramebuffer(36160,_this4.readFrameBufferObject);
-		snow_modules_opengl_web_GL.gl.clearColor(0,0,0,1);
-		snow_modules_opengl_web_GL.gl.clear(16384);
-		snow_modules_opengl_web_GL.gl.bindFramebuffer(36160,_this4.writeFrameBufferObject);
-		snow_modules_opengl_web_GL.gl.clearColor(0,0,0,1);
-		snow_modules_opengl_web_GL.gl.clear(16384);
+		this.particles.reset();
+		this.fluid.clear();
 	}
 	,windowToClipSpaceX: function(x) {
 		return x / this.app.runtime.window.width * 2 - 1;
@@ -3946,9 +2645,10 @@ Main.prototype = $extend(snow_App.prototype,{
 		_this.x = x;
 		_this.y = y;
 		var _this1 = this.mouseFluid;
-		var _this2 = this.fluid;
-		_this1.x = (x / this.app.runtime.window.width * 2 - 1) * this.fluid.aspectRatio;
-		_this1.y = (this.app.runtime.window.height - y) / this.app.runtime.window.height * 2 - 1;
+		var x1 = this.fluid.clipToAspectSpaceX(this.windowToClipSpaceX(x));
+		var y1 = this.fluid.clipToAspectSpaceY(this.windowToClipSpaceY(y));
+		_this1.x = x1;
+		_this1.y = y1;
 		this.mousePointKnown = true;
 	}
 	,updateLastMouse: function() {
@@ -3956,9 +2656,10 @@ Main.prototype = $extend(snow_App.prototype,{
 		_this.x = this.mouse.x;
 		_this.y = this.mouse.y;
 		var _this1 = this.lastMouseFluid;
-		var _this2 = this.fluid;
-		_this1.x = (this.mouse.x / this.app.runtime.window.width * 2 - 1) * this.fluid.aspectRatio;
-		_this1.y = (this.app.runtime.window.height - this.mouse.y) / this.app.runtime.window.height * 2 - 1;
+		var x = this.fluid.clipToAspectSpaceX(this.windowToClipSpaceX(this.mouse.x));
+		var y = this.fluid.clipToAspectSpaceY(this.windowToClipSpaceY(this.mouse.y));
+		_this1.x = x;
+		_this1.y = y;
 		this.lastMousePointKnown = this.mousePointKnown;
 	}
 	,onkeydown: function(keyCode,_,_1,_2,_3,_4) {
@@ -3981,95 +2682,13 @@ Main.prototype = $extend(snow_App.prototype,{
 			break;
 		case 114:
 			if(this.lshiftDown || this.rshiftDown) {
-				var _this = this.particles;
-				var shader = _this.inititalConditionsShader;
-				var target = _this.particleData;
-				snow_modules_opengl_web_GL.gl.viewport(0,0,target.width,target.height);
-				snow_modules_opengl_web_GL.gl.bindFramebuffer(36160,target.writeFrameBufferObject);
-				snow_modules_opengl_web_GL.gl.bindBuffer(34962,_this.textureQuad);
-				if(shader._active) {
-					var _g = 0;
-					var _g1 = shader._uniforms;
-					while(_g < _g1.length) {
-						var u = _g1[_g];
-						++_g;
-						u.apply();
-					}
-					var offset = 0;
-					var _g11 = 0;
-					var _g2 = shader._attributes.length;
-					while(_g11 < _g2) {
-						var i = _g11++;
-						var att = shader._attributes[i];
-						var location = att.location;
-						if(location != -1) {
-							snow_modules_opengl_web_GL.gl.enableVertexAttribArray(location);
-							snow_modules_opengl_web_GL.gl.vertexAttribPointer(location,att.itemCount,att.type,false,shader._aStride,offset);
-						}
-						offset += att.byteSize;
-					}
-				} else {
-					if(!shader._ready) {
-						shader.create();
-					}
-					snow_modules_opengl_web_GL.gl.useProgram(shader._prog);
-					var _g3 = 0;
-					var _g12 = shader._uniforms;
-					while(_g3 < _g12.length) {
-						var u1 = _g12[_g3];
-						++_g3;
-						u1.apply();
-					}
-					var offset1 = 0;
-					var _g13 = 0;
-					var _g4 = shader._attributes.length;
-					while(_g13 < _g4) {
-						var i1 = _g13++;
-						var att1 = shader._attributes[i1];
-						var location1 = att1.location;
-						if(location1 != -1) {
-							snow_modules_opengl_web_GL.gl.enableVertexAttribArray(location1);
-							snow_modules_opengl_web_GL.gl.vertexAttribPointer(location1,att1.itemCount,att1.type,false,shader._aStride,offset1);
-						}
-						offset1 += att1.byteSize;
-					}
-					shader._active = true;
-				}
-				snow_modules_opengl_web_GL.gl.drawArrays(5,0,4);
-				shader.deactivate();
-				target.tmpFBO = target.writeFrameBufferObject;
-				target.writeFrameBufferObject = target.readFrameBufferObject;
-				target.readFrameBufferObject = target.tmpFBO;
-				target.tmpTex = target.writeToTexture;
-				target.writeToTexture = target.readFromTexture;
-				target.readFromTexture = target.tmpTex;
+				this.particles.reset();
 			} else {
 				this.reset();
 			}
 			break;
 		case 115:
-			var _this1 = this.fluid;
-			var _this2 = _this1.velocityRenderTarget;
-			snow_modules_opengl_web_GL.gl.bindFramebuffer(36160,_this2.readFrameBufferObject);
-			snow_modules_opengl_web_GL.gl.clearColor(0,0,0,1);
-			snow_modules_opengl_web_GL.gl.clear(16384);
-			snow_modules_opengl_web_GL.gl.bindFramebuffer(36160,_this2.writeFrameBufferObject);
-			snow_modules_opengl_web_GL.gl.clearColor(0,0,0,1);
-			snow_modules_opengl_web_GL.gl.clear(16384);
-			var _this3 = _this1.pressureRenderTarget;
-			snow_modules_opengl_web_GL.gl.bindFramebuffer(36160,_this3.readFrameBufferObject);
-			snow_modules_opengl_web_GL.gl.clearColor(0,0,0,1);
-			snow_modules_opengl_web_GL.gl.clear(16384);
-			snow_modules_opengl_web_GL.gl.bindFramebuffer(36160,_this3.writeFrameBufferObject);
-			snow_modules_opengl_web_GL.gl.clearColor(0,0,0,1);
-			snow_modules_opengl_web_GL.gl.clear(16384);
-			var _this4 = _this1.dyeRenderTarget;
-			snow_modules_opengl_web_GL.gl.bindFramebuffer(36160,_this4.readFrameBufferObject);
-			snow_modules_opengl_web_GL.gl.clearColor(0,0,0,1);
-			snow_modules_opengl_web_GL.gl.clear(16384);
-			snow_modules_opengl_web_GL.gl.bindFramebuffer(36160,_this4.writeFrameBufferObject);
-			snow_modules_opengl_web_GL.gl.clearColor(0,0,0,1);
-			snow_modules_opengl_web_GL.gl.clear(16384);
+			this.fluid.clear();
 			break;
 		case 1073742049:
 			this.lshiftDown = false;
@@ -4144,7 +2763,7 @@ ColorParticleMotion.prototype = $extend(RenderParticles.prototype,{
 		this._aStride += 0;
 	}
 	,initSources: function() {
-		this._vertSource = "\r\n#ifdef GL_ES\r\nprecision highp float;\r\nprecision highp sampler2D;\r\n#endif\n\nuniform sampler2D particleData;\n\tattribute vec2 particleUV;\n\tvarying vec4 color;\n\t\n\n\nconst float POINT_SIZE = 1.0;\n\tvoid main(){\n\t\tvec2 p = texture2D(particleData, particleUV).xy;\n\t\tvec2 v = texture2D(particleData, particleUV).zw;\n\t\tgl_PointSize = POINT_SIZE;\n\t\tgl_Position = vec4(p, 0.0, 1.0);\n\t\tfloat speed = length(v);\n\t\tfloat x = clamp(speed * 2.0, 0., 1.);\n\t\tcolor.rgb = (\n\t\t\t\tmix(vec3(40.4, 0.0, 35.0) / 300.0, vec3(0.2, 47.8, 100) / 100.0, x)\n\t\t\t\t+ (vec3(63.1, 92.5, 100) / 100.) * x*x*x * .1\n\t\t);\n\t\tcolor.a = 1.0;\n\t}\n";
+		this._vertSource = "\r\n#ifdef GL_ES\r\nprecision highp float;\r\nprecision highp sampler2D;\r\n#endif\n\nuniform sampler2D particleData;\n\tattribute vec2 particleUV;\n\tvarying vec4 color;\n\n\n\nconst float POINT_SIZE = 1.0;\n\tvoid main(){\n\t\tvec2 p = texture2D(particleData, particleUV).xy;\n\t\tvec2 v = texture2D(particleData, particleUV).zw;\n\t\tgl_PointSize = POINT_SIZE;\n\t\tgl_Position = vec4(p, 0.0, 1.0);\n\t\tfloat speed = length(v);\n\t\tfloat x = clamp(speed * 2.0, 0., 1.);\n\t\tcolor.rgb = (\n\t\t\t\tmix(vec3(40.4, 0.0, 35.0) / 300.0, vec3(0.2, 47.8, 100) / 100.0, x)\n\t\t\t\t+ (vec3(63.1, 92.5, 100) / 100.) * x*x*x * .1\n\t\t);\n\t\tcolor.a = 1.0;\n\t}\n";
 		this._fragSource = "\r\n#ifdef GL_ES\r\nprecision highp float;\r\nprecision highp sampler2D;\r\n#endif\n\nvarying vec4 color;\n\n\tvoid main(){\n\t\tgl_FragColor = vec4(color);\n\t}\n\n\n";
 	}
 	,__class__: ColorParticleMotion
@@ -7394,6 +6013,7 @@ var snow_Snow = function(_host) {
 	this.win_event = new snow_types_WindowEvent();
 	this.io = new snow_systems_io_IO(this);
 	this.input = new snow_systems_input_Input(this);
+	this.audio = new snow_systems_audio_Audio(this);
 	this.assets = new snow_systems_assets_Assets(this);
 	this.extensions = [];
 	var _g = 0;
@@ -7523,6 +6143,8 @@ snow_Snow.prototype = {
 	}
 	,onevent: function(_event) {
 		this.io.module.onevent(_event);
+		this.audio.onevent(_event);
+		this.input.onevent(_event);
 		this.host.onevent(_event);
 		this.i = 0;
 		while(this.i < this.extensions.length) {
@@ -8668,6 +7290,81 @@ snow_core_web_Runtime.prototype = {
 			this.app.dispatch_window_event(9,window.performance.now() / 1000.0 - snow_core_web_Runtime.timestamp_start,1,null,null);
 			this.app.dispatch_window_event(12,window.performance.now() / 1000.0 - snow_core_web_Runtime.timestamp_start,1,null,null);
 		}
+	}
+	,on_keydown: function(_ev) {
+		var dom_keycode = _ev.keyCode;
+		var _keycode = dom_keycode >= 65 && dom_keycode <= 90 ? dom_keycode + 32 : snow_core_web__$Runtime_DOMKeys.dom_key_to_keycode(dom_keycode);
+		var _scancode = snow_systems_input_Keycodes.to_scan(_keycode);
+		var _none = !_ev.altKey && !_ev.ctrlKey && !_ev.metaKey && !_ev.shiftKey;
+		this.app.input.mod_state.none = _none;
+		this.app.input.mod_state.lshift = _ev.shiftKey;
+		this.app.input.mod_state.rshift = _ev.shiftKey;
+		this.app.input.mod_state.lctrl = _ev.ctrlKey;
+		this.app.input.mod_state.rctrl = _ev.ctrlKey;
+		this.app.input.mod_state.lalt = _ev.altKey;
+		this.app.input.mod_state.ralt = _ev.altKey;
+		this.app.input.mod_state.lmeta = _ev.metaKey;
+		this.app.input.mod_state.rmeta = _ev.metaKey;
+		this.app.input.mod_state.num = false;
+		this.app.input.mod_state.caps = false;
+		this.app.input.mod_state.mode = false;
+		this.app.input.mod_state.ctrl = _ev.ctrlKey;
+		this.app.input.mod_state.shift = _ev.shiftKey;
+		this.app.input.mod_state.alt = _ev.altKey;
+		this.app.input.mod_state.meta = _ev.metaKey;
+		var _mod_state = this.app.input.mod_state;
+		if(this.app.config.runtime.prevent_default_keys.indexOf(_keycode) != -1) {
+			_ev.preventDefault();
+		}
+		this.app.input.dispatch_key_down_event(_keycode,_scancode,_ev.repeat,_mod_state,window.performance.now() / 1000.0 - snow_core_web_Runtime.timestamp_start,1);
+	}
+	,on_keyup: function(_ev) {
+		var dom_keycode = _ev.keyCode;
+		var _keycode = dom_keycode >= 65 && dom_keycode <= 90 ? dom_keycode + 32 : snow_core_web__$Runtime_DOMKeys.dom_key_to_keycode(dom_keycode);
+		var _scancode = snow_systems_input_Keycodes.to_scan(_keycode);
+		var _none = !_ev.altKey && !_ev.ctrlKey && !_ev.metaKey && !_ev.shiftKey;
+		this.app.input.mod_state.none = _none;
+		this.app.input.mod_state.lshift = _ev.shiftKey;
+		this.app.input.mod_state.rshift = _ev.shiftKey;
+		this.app.input.mod_state.lctrl = _ev.ctrlKey;
+		this.app.input.mod_state.rctrl = _ev.ctrlKey;
+		this.app.input.mod_state.lalt = _ev.altKey;
+		this.app.input.mod_state.ralt = _ev.altKey;
+		this.app.input.mod_state.lmeta = _ev.metaKey;
+		this.app.input.mod_state.rmeta = _ev.metaKey;
+		this.app.input.mod_state.num = false;
+		this.app.input.mod_state.caps = false;
+		this.app.input.mod_state.mode = false;
+		this.app.input.mod_state.ctrl = _ev.ctrlKey;
+		this.app.input.mod_state.shift = _ev.shiftKey;
+		this.app.input.mod_state.alt = _ev.altKey;
+		this.app.input.mod_state.meta = _ev.metaKey;
+		var _mod_state = this.app.input.mod_state;
+		if(this.app.config.runtime.prevent_default_keys.indexOf(_keycode) != -1) {
+			_ev.preventDefault();
+		}
+		this.app.input.dispatch_key_up_event(_keycode,_scancode,_ev.repeat,_mod_state,window.performance.now() / 1000.0 - snow_core_web_Runtime.timestamp_start,1);
+	}
+	,on_keypress: function(_ev) {
+		if(_ev.which != 0 && snow_core_web_Runtime.key_press_ignored.indexOf(_ev.keyCode) == -1) {
+			var _text = String.fromCharCode(_ev.charCode);
+			this.app.input.dispatch_text_event(_text,0,_text.length,2,window.performance.now() / 1000.0 - snow_core_web_Runtime.timestamp_start,1);
+		}
+	}
+	,on_gamepadconnected: function(_ev) {
+		var _gamepad = _ev.gamepad;
+		this.gamepad_btns_cache[_gamepad.index] = [];
+		var _g1 = 0;
+		var _g = _gamepad.buttons.length;
+		while(_g1 < _g) {
+			var i = _g1++;
+			this.gamepad_btns_cache[_gamepad.index].push(0);
+		}
+		this.app.input.dispatch_gamepad_device_event(_ev.gamepad.index,_ev.gamepad.id,1,window.performance.now() / 1000.0 - snow_core_web_Runtime.timestamp_start);
+	}
+	,on_gamepaddisconnected: function(_ev) {
+		this.gamepad_btns_cache[_ev.gamepad.index] = null;
+		this.app.input.dispatch_gamepad_device_event(_ev.gamepad.index,_ev.gamepad.id,2,window.performance.now() / 1000.0 - snow_core_web_Runtime.timestamp_start);
 	}
 	,create_window: function() {
 		var config = this.app.config.window;
@@ -11042,11 +9739,39 @@ var snow_systems_input_Input = function(_app) {
 	this.text_event = new snow_types_TextEvent();
 	this.mouse_event = new snow_types_MouseEvent();
 	this.touch_event = new snow_types_TouchEvent();
+	this.gamepad_event = new snow_types_GamepadEvent();
 	this.mod_state = new snow_types_ModState();
 	this.mod_state.none = true;
+	this.key_code_pressed = new haxe_ds_IntMap();
+	this.key_code_down = new haxe_ds_IntMap();
+	this.key_code_released = new haxe_ds_IntMap();
+	this.scan_code_pressed = new haxe_ds_IntMap();
+	this.scan_code_down = new haxe_ds_IntMap();
+	this.scan_code_released = new haxe_ds_IntMap();
 	this.mouse_button_pressed = new haxe_ds_IntMap();
 	this.mouse_button_down = new haxe_ds_IntMap();
 	this.mouse_button_released = new haxe_ds_IntMap();
+	this.gamepad_button_pressed = new haxe_ds_IntMap();
+	this.gamepad_button_down = new haxe_ds_IntMap();
+	this.gamepad_button_released = new haxe_ds_IntMap();
+	this.gamepad_axis_values = new haxe_ds_IntMap();
+	var _g1 = 0;
+	var _g = this.gamepad_init_count;
+	while(_g1 < _g) {
+		var i = _g1++;
+		var this1 = this.gamepad_button_pressed;
+		var value = new haxe_ds_IntMap();
+		this1.h[i] = value;
+		var this2 = this.gamepad_button_down;
+		var value1 = new haxe_ds_IntMap();
+		this2.h[i] = value1;
+		var this3 = this.gamepad_button_released;
+		var value2 = new haxe_ds_IntMap();
+		this3.h[i] = value2;
+		var this4 = this.gamepad_axis_values;
+		var value3 = new haxe_ds_IntMap();
+		this4.h[i] = value3;
+	}
 	this.touches_down = new haxe_ds_IntMap();
 };
 $hxClasses["snow.systems.input.Input"] = snow_systems_input_Input;
@@ -11435,6 +10160,35 @@ snow_systems_input_Input.prototype = {
 		this.app.dispatch_input_event(this.event);
 		this.app.host.ongamepadup(gamepad,button,value,timestamp);
 	}
+	,dispatch_gamepad_device_event: function(gamepad,id,type,timestamp) {
+		var _this = this.gamepad_event;
+		_this.axis = null;
+		_this.value = null;
+		_this.button = null;
+		_this.device_id = id;
+		_this.device_event = type;
+		_this.gamepad = gamepad;
+		_this.type = 4;
+		var _this1 = this.event;
+		_this1.type = 5;
+		_this1.key = null;
+		_this1.text = null;
+		_this1.mouse = null;
+		_this1.touch = null;
+		_this1.gamepad = null;
+		_this1.window_id = 0;
+		_this1.timestamp = timestamp;
+		_this1.gamepad = this.gamepad_event;
+		this.app.dispatch_input_event(this.event);
+		this.app.host.ongamepaddevice(gamepad,id,type,timestamp);
+	}
+	,onevent: function(_event) {
+		if(_event.type == 3) {
+			this._update_keystate();
+			this._update_gamepadstate();
+			this._update_mousestate();
+		}
+	}
 	,_update_mousestate: function() {
 		var _code = this.mouse_button_pressed.keys();
 		while(_code.hasNext()) {
@@ -11482,6 +10236,192 @@ snow_systems_input_Input.prototype = {
 				}
 			}
 		}
+	}
+	,_update_keystate: function() {
+		var _code = this.key_code_pressed.keys();
+		while(_code.hasNext()) {
+			var _code1 = _code.next();
+			if(this.key_code_pressed.h[_code1]) {
+				this.key_code_pressed.remove(_code1);
+			} else {
+				this.key_code_pressed.h[_code1] = true;
+			}
+		}
+		var _code2 = this.key_code_released.keys();
+		while(_code2.hasNext()) {
+			var _code3 = _code2.next();
+			if(this.key_code_released.h[_code3]) {
+				this.key_code_released.remove(_code3);
+			} else {
+				this.key_code_released.h[_code3] = true;
+			}
+		}
+		var _code4 = this.scan_code_pressed.keys();
+		while(_code4.hasNext()) {
+			var _code5 = _code4.next();
+			if(this.scan_code_pressed.h[_code5]) {
+				this.scan_code_pressed.remove(_code5);
+			} else {
+				this.scan_code_pressed.h[_code5] = true;
+			}
+		}
+		var _code6 = this.scan_code_released.keys();
+		while(_code6.hasNext()) {
+			var _code7 = _code6.next();
+			if(this.scan_code_released.h[_code7]) {
+				this.scan_code_released.remove(_code7);
+			} else {
+				this.scan_code_released.h[_code7] = true;
+			}
+		}
+	}
+	,__class__: snow_systems_input_Input
+};
+var snow_systems_input_Keycodes = function() { };
+$hxClasses["snow.systems.input.Keycodes"] = snow_systems_input_Keycodes;
+snow_systems_input_Keycodes.__name__ = ["snow","systems","input","Keycodes"];
+snow_systems_input_Keycodes.from_scan = function(scancode) {
+	return scancode | 1073741824;
+};
+snow_systems_input_Keycodes.to_scan = function(keycode) {
+	if((keycode & 1073741824) != 0) {
+		return keycode & -1073741825;
+	}
+	switch(keycode) {
+	case 8:
+		return 42;
+	case 9:
+		return 43;
+	case 13:
+		return 40;
+	case 27:
+		return 41;
+	case 32:
+		return 44;
+	case 47:
+		return 56;
+	case 48:
+		return 39;
+	case 49:
+		return 30;
+	case 50:
+		return 31;
+	case 51:
+		return 32;
+	case 52:
+		return 33;
+	case 53:
+		return 34;
+	case 54:
+		return 35;
+	case 55:
+		return 36;
+	case 56:
+		return 37;
+	case 57:
+		return 38;
+	case 59:
+		return 51;
+	case 61:
+		return 46;
+	case 91:
+		return 47;
+	case 92:
+		return 49;
+	case 93:
+		return 48;
+	case 96:
+		return 53;
+	case 97:
+		return 4;
+	case 98:
+		return 5;
+	case 99:
+		return 6;
+	case 100:
+		return 7;
+	case 101:
+		return 8;
+	case 102:
+		return 9;
+	case 103:
+		return 10;
+	case 104:
+		return 11;
+	case 105:
+		return 12;
+	case 106:
+		return 13;
+	case 107:
+		return 14;
+	case 108:
+		return 15;
+	case 109:
+		return 16;
+	case 110:
+		return 17;
+	case 111:
+		return 18;
+	case 112:
+		return 19;
+	case 113:
+		return 20;
+	case 114:
+		return 21;
+	case 115:
+		return 22;
+	case 116:
+		return 23;
+	case 117:
+		return 24;
+	case 118:
+		return 25;
+	case 119:
+		return 26;
+	case 120:
+		return 27;
+	case 121:
+		return 28;
+	case 122:
+		return 29;
+	}
+	return 0;
+};
+snow_systems_input_Keycodes.$name = function(keycode) {
+	if((keycode & 1073741824) != 0) {
+		return snow_systems_input_Scancodes.$name(keycode & -1073741825);
+	}
+	switch(keycode) {
+	case 8:
+		return snow_systems_input_Scancodes.$name(42);
+	case 9:
+		return snow_systems_input_Scancodes.$name(43);
+	case 13:
+		return snow_systems_input_Scancodes.$name(40);
+	case 27:
+		return snow_systems_input_Scancodes.$name(41);
+	case 32:
+		return snow_systems_input_Scancodes.$name(44);
+	case 127:
+		return snow_systems_input_Scancodes.$name(76);
+	default:
+		var decoder = new haxe_Utf8();
+		decoder.__b += String.fromCharCode(keycode);
+		return decoder.__b;
+	}
+};
+var snow_systems_input_Scancodes = function() { };
+$hxClasses["snow.systems.input.Scancodes"] = snow_systems_input_Scancodes;
+snow_systems_input_Scancodes.__name__ = ["snow","systems","input","Scancodes"];
+snow_systems_input_Scancodes.$name = function(scancode) {
+	var res = null;
+	if(scancode >= 0 && scancode < snow_systems_input_Scancodes.scancode_names.length) {
+		res = snow_systems_input_Scancodes.scancode_names[scancode];
+	}
+	if(res != null) {
+		return res;
+	} else {
+		return "";
 	}
 };
 var snow_systems_io_IO = function(_app) {
@@ -11766,6 +10706,61 @@ snow_types_ImageData.prototype = {
 		return "{ \"ImageData\":true, \"id\":" + this.id + ", \"width\":" + this.width + ", \"height\":" + this.height + ", \"width_actual\":" + this.width_actual + ", \"height_actual\":" + this.height_actual + ", \"bpp\":" + this.bpp + ", \"bpp_source\":" + this.bpp_source + " }";
 	}
 	,__class__: snow_types_ImageData
+};
+var snow_types__$Types_AudioFormatType_$Impl_$ = {};
+$hxClasses["snow.types._Types.AudioFormatType_Impl_"] = snow_types__$Types_AudioFormatType_$Impl_$;
+snow_types__$Types_AudioFormatType_$Impl_$.__name__ = ["snow","types","_Types","AudioFormatType_Impl_"];
+snow_types__$Types_AudioFormatType_$Impl_$.toString = function(this1) {
+	if(this1 == null) {
+		return "" + this1;
+	} else {
+		switch(this1) {
+		case 0:
+			return "af_unknown";
+		case 1:
+			return "af_custom";
+		case 2:
+			return "af_ogg";
+		case 3:
+			return "af_wav";
+		case 4:
+			return "af_pcm";
+		default:
+			return "" + this1;
+		}
+	}
+};
+var snow_types__$Types_AudioEvent_$Impl_$ = {};
+$hxClasses["snow.types._Types.AudioEvent_Impl_"] = snow_types__$Types_AudioEvent_$Impl_$;
+snow_types__$Types_AudioEvent_$Impl_$.__name__ = ["snow","types","_Types","AudioEvent_Impl_"];
+snow_types__$Types_AudioEvent_$Impl_$.toString = function(this1) {
+	switch(this1) {
+	case 0:
+		return "ae_end";
+	case 1:
+		return "ae_destroyed";
+	case 2:
+		return "ae_destroyed_source";
+	default:
+		return "" + this1;
+	}
+};
+var snow_types__$Types_AudioState_$Impl_$ = {};
+$hxClasses["snow.types._Types.AudioState_Impl_"] = snow_types__$Types_AudioState_$Impl_$;
+snow_types__$Types_AudioState_$Impl_$.__name__ = ["snow","types","_Types","AudioState_Impl_"];
+snow_types__$Types_AudioState_$Impl_$.toString = function(this1) {
+	switch(this1) {
+	case -1:
+		return "as_invalid";
+	case 0:
+		return "as_paused";
+	case 1:
+		return "as_playing";
+	case 2:
+		return "as_stopped";
+	default:
+		return "" + this1;
+	}
 };
 var snow_types__$Types_OpenGLProfile_$Impl_$ = {};
 $hxClasses["snow.types._Types.OpenGLProfile_Impl_"] = snow_types__$Types_OpenGLProfile_$Impl_$;
@@ -12070,6 +11065,83 @@ snow_types_TouchEvent.prototype = {
 	}
 	,__class__: snow_types_TouchEvent
 };
+var snow_types_GamepadEvent = function() {
+};
+$hxClasses["snow.types.GamepadEvent"] = snow_types_GamepadEvent;
+snow_types_GamepadEvent.__name__ = ["snow","types","GamepadEvent"];
+snow_types_GamepadEvent.prototype = {
+	set_axis: function(_gamepad,_axis,_value) {
+		this.button = null;
+		this.device_id = null;
+		this.device_event = null;
+		this.axis = _axis;
+		this.value = _value;
+		this.type = 1;
+		this.gamepad = _gamepad;
+	}
+	,set_button: function(_type,_gamepad,_button,_value) {
+		this.axis = null;
+		this.device_id = null;
+		this.device_event = null;
+		this.type = _type;
+		this.value = _value;
+		this.button = _button;
+		this.gamepad = _gamepad;
+	}
+	,set_device: function(_gamepad,_id,_event) {
+		this.axis = null;
+		this.value = null;
+		this.button = null;
+		this.device_id = _id;
+		this.device_event = _event;
+		this.gamepad = _gamepad;
+		this.type = 4;
+	}
+	,toString: function() {
+		var this1 = this.type;
+		var tmp;
+		switch(this1) {
+		case 0:
+			tmp = "ge_unknown";
+			break;
+		case 1:
+			tmp = "ge_axis";
+			break;
+		case 2:
+			tmp = "ge_down";
+			break;
+		case 3:
+			tmp = "ge_up";
+			break;
+		case 4:
+			tmp = "ge_device";
+			break;
+		default:
+			tmp = "" + this1;
+		}
+		var tmp1 = "{ \"GamepadEvent\":true, \"type\":\"" + tmp + "\", \"gamepad\":" + this.gamepad + ", \"axis\":" + this.axis + ", \"button\":" + this.button + ", \"value\":" + this.value + ", \"device_id\":\"" + this.device_id + "\", \"device_event\":\"";
+		var this2 = this.device_event;
+		var tmp2;
+		switch(this2) {
+		case 0:
+			tmp2 = "ge_unknown";
+			break;
+		case 1:
+			tmp2 = "ge_device_added";
+			break;
+		case 2:
+			tmp2 = "ge_device_removed";
+			break;
+		case 3:
+			tmp2 = "ge_device_remapped";
+			break;
+		default:
+			tmp2 = "" + this2;
+		}
+		return tmp1 + tmp2 + "\" }";
+	}
+	,__class__: snow_types_GamepadEvent
+};
 var snow_types_InputEvent = function() {
 	this.window_id = -1;
 	this.timestamp = 0.0;
@@ -12282,6 +11354,61 @@ snow_types__$Types_KeyEventType_$Impl_$.toString = function(this1) {
 		return "" + this1;
 	}
 };
+var snow_types__$Types_MouseEventType_$Impl_$ = {};
+$hxClasses["snow.types._Types.MouseEventType_Impl_"] = snow_types__$Types_MouseEventType_$Impl_$;
+snow_types__$Types_MouseEventType_$Impl_$.__name__ = ["snow","types","_Types","MouseEventType_Impl_"];
+snow_types__$Types_MouseEventType_$Impl_$.toString = function(this1) {
+	switch(this1) {
+	case 0:
+		return "me_unknown";
+	case 1:
+		return "me_move";
+	case 2:
+		return "me_down";
+	case 3:
+		return "me_up";
+	case 4:
+		return "me_wheel";
+	default:
+		return "" + this1;
+	}
+};
+var snow_types__$Types_TouchEventType_$Impl_$ = {};
+$hxClasses["snow.types._Types.TouchEventType_Impl_"] = snow_types__$Types_TouchEventType_$Impl_$;
+snow_types__$Types_TouchEventType_$Impl_$.__name__ = ["snow","types","_Types","TouchEventType_Impl_"];
+snow_types__$Types_TouchEventType_$Impl_$.toString = function(this1) {
+	switch(this1) {
+	case 0:
+		return "te_unknown";
+	case 1:
+		return "te_move";
+	case 2:
+		return "te_down";
+	case 3:
+		return "te_up";
+	default:
+		return "" + this1;
+	}
+};
+var snow_types__$Types_GamepadEventType_$Impl_$ = {};
+$hxClasses["snow.types._Types.GamepadEventType_Impl_"] = snow_types__$Types_GamepadEventType_$Impl_$;
+snow_types__$Types_GamepadEventType_$Impl_$.__name__ = ["snow","types","_Types","GamepadEventType_Impl_"];
+snow_types__$Types_GamepadEventType_$Impl_$.toString = function(this1) {
+	switch(this1) {
+	case 0:
+		return "ge_unknown";
+	case 1:
+		return "ge_axis";
+	case 2:
+		return "ge_down";
+	case 3:
+		return "ge_up";
+	case 4:
+		return "ge_device";
+	default:
+		return "" + this1;
+	}
+};
 var snow_types__$Types_TextEventType_$Impl_$ = {};
 $hxClasses["snow.types._Types.TextEventType_Impl_"] = snow_types__$Types_TextEventType_$Impl_$;
 snow_types__$Types_TextEventType_$Impl_$.__name__ = ["snow","types","_Types","TextEventType_Impl_"];
@@ -12293,6 +11420,64 @@ snow_types__$Types_TextEventType_$Impl_$.toString = function(this1) {
 		return "te_edit";
 	case 2:
 		return "te_input";
+	default:
+		return "" + this1;
+	}
+};
+var snow_types__$Types_GamepadDeviceEventType_$Impl_$ = {};
+$hxClasses["snow.types._Types.GamepadDeviceEventType_Impl_"] = snow_types__$Types_GamepadDeviceEventType_$Impl_$;
+snow_types__$Types_GamepadDeviceEventType_$Impl_$.__name__ = ["snow","types","_Types","GamepadDeviceEventType_Impl_"];
+snow_types__$Types_GamepadDeviceEventType_$Impl_$.toString = function(this1) {
+	switch(this1) {
+	case 0:
+		return "ge_unknown";
+	case 1:
+		return "ge_device_added";
+	case 2:
+		return "ge_device_removed";
+	case 3:
+		return "ge_device_remapped";
+	default:
+		return "" + this1;
+	}
+};
+var snow_types__$Types_SystemEventType_$Impl_$ = {};
+$hxClasses["snow.types._Types.SystemEventType_Impl_"] = snow_types__$Types_SystemEventType_$Impl_$;
+snow_types__$Types_SystemEventType_$Impl_$.__name__ = ["snow","types","_Types","SystemEventType_Impl_"];
+snow_types__$Types_SystemEventType_$Impl_$.toString = function(this1) {
+	switch(this1) {
+	case 0:
+		return "se_unknown";
+	case 1:
+		return "se_init";
+	case 2:
+		return "se_ready";
+	case 3:
+		return "se_tick";
+	case 4:
+		return "se_freeze";
+	case 5:
+		return "se_unfreeze";
+	case 7:
+		return "se_shutdown";
+	case 8:
+		return "se_window";
+	case 9:
+		return "se_input";
+	case 10:
+		return "se_quit";
+	case 11:
+		return "se_app_terminating";
+	case 12:
+		return "se_app_lowmemory";
+	case 13:
+		return "se_app_willenterbackground";
+	case 14:
+		return "se_app_didenterbackground";
+	case 15:
+		return "se_app_willenterforeground";
+	case 16:
+		return "se_app_didenterforeground";
 	default:
 		return "" + this1;
 	}
@@ -12453,6 +11638,93 @@ snow_api_buffers__$Uint8Array_Uint8Array_$Impl_$.BYTES_PER_ELEMENT = 1;
 snow_core_web_Runtime.web_window_id = 1;
 snow_core_web_Runtime.timestamp_start = 0.0;
 snow_core_web_Runtime.key_press_ignored = [8,13];
+snow_core_web__$Runtime_DOMKeys.dom_shift = 16;
+snow_core_web__$Runtime_DOMKeys.dom_ctrl = 17;
+snow_core_web__$Runtime_DOMKeys.dom_alt = 18;
+snow_core_web__$Runtime_DOMKeys.dom_capslock = 20;
+snow_core_web__$Runtime_DOMKeys.dom_pageup = 33;
+snow_core_web__$Runtime_DOMKeys.dom_pagedown = 34;
+snow_core_web__$Runtime_DOMKeys.dom_end = 35;
+snow_core_web__$Runtime_DOMKeys.dom_home = 36;
+snow_core_web__$Runtime_DOMKeys.dom_left = 37;
+snow_core_web__$Runtime_DOMKeys.dom_up = 38;
+snow_core_web__$Runtime_DOMKeys.dom_right = 39;
+snow_core_web__$Runtime_DOMKeys.dom_down = 40;
+snow_core_web__$Runtime_DOMKeys.dom_printscr = 44;
+snow_core_web__$Runtime_DOMKeys.dom_insert = 45;
+snow_core_web__$Runtime_DOMKeys.dom_delete = 46;
+snow_core_web__$Runtime_DOMKeys.dom_lmeta = 91;
+snow_core_web__$Runtime_DOMKeys.dom_rmeta = 93;
+snow_core_web__$Runtime_DOMKeys.dom_kp_0 = 96;
+snow_core_web__$Runtime_DOMKeys.dom_kp_1 = 97;
+snow_core_web__$Runtime_DOMKeys.dom_kp_2 = 98;
+snow_core_web__$Runtime_DOMKeys.dom_kp_3 = 99;
+snow_core_web__$Runtime_DOMKeys.dom_kp_4 = 100;
+snow_core_web__$Runtime_DOMKeys.dom_kp_5 = 101;
+snow_core_web__$Runtime_DOMKeys.dom_kp_6 = 102;
+snow_core_web__$Runtime_DOMKeys.dom_kp_7 = 103;
+snow_core_web__$Runtime_DOMKeys.dom_kp_8 = 104;
+snow_core_web__$Runtime_DOMKeys.dom_kp_9 = 105;
+snow_core_web__$Runtime_DOMKeys.dom_kp_multiply = 106;
+snow_core_web__$Runtime_DOMKeys.dom_kp_plus = 107;
+snow_core_web__$Runtime_DOMKeys.dom_kp_minus = 109;
+snow_core_web__$Runtime_DOMKeys.dom_kp_decimal = 110;
+snow_core_web__$Runtime_DOMKeys.dom_kp_divide = 111;
+snow_core_web__$Runtime_DOMKeys.dom_kp_numlock = 144;
+snow_core_web__$Runtime_DOMKeys.dom_f1 = 112;
+snow_core_web__$Runtime_DOMKeys.dom_f2 = 113;
+snow_core_web__$Runtime_DOMKeys.dom_f3 = 114;
+snow_core_web__$Runtime_DOMKeys.dom_f4 = 115;
+snow_core_web__$Runtime_DOMKeys.dom_f5 = 116;
+snow_core_web__$Runtime_DOMKeys.dom_f6 = 117;
+snow_core_web__$Runtime_DOMKeys.dom_f7 = 118;
+snow_core_web__$Runtime_DOMKeys.dom_f8 = 119;
+snow_core_web__$Runtime_DOMKeys.dom_f9 = 120;
+snow_core_web__$Runtime_DOMKeys.dom_f10 = 121;
+snow_core_web__$Runtime_DOMKeys.dom_f11 = 122;
+snow_core_web__$Runtime_DOMKeys.dom_f12 = 123;
+snow_core_web__$Runtime_DOMKeys.dom_f13 = 124;
+snow_core_web__$Runtime_DOMKeys.dom_f14 = 125;
+snow_core_web__$Runtime_DOMKeys.dom_f15 = 126;
+snow_core_web__$Runtime_DOMKeys.dom_f16 = 127;
+snow_core_web__$Runtime_DOMKeys.dom_f17 = 128;
+snow_core_web__$Runtime_DOMKeys.dom_f18 = 129;
+snow_core_web__$Runtime_DOMKeys.dom_f19 = 130;
+snow_core_web__$Runtime_DOMKeys.dom_f20 = 131;
+snow_core_web__$Runtime_DOMKeys.dom_f21 = 132;
+snow_core_web__$Runtime_DOMKeys.dom_f22 = 133;
+snow_core_web__$Runtime_DOMKeys.dom_f23 = 134;
+snow_core_web__$Runtime_DOMKeys.dom_f24 = 135;
+snow_core_web__$Runtime_DOMKeys.dom_caret = 160;
+snow_core_web__$Runtime_DOMKeys.dom_exclaim = 161;
+snow_core_web__$Runtime_DOMKeys.dom_quotedbl = 162;
+snow_core_web__$Runtime_DOMKeys.dom_hash = 163;
+snow_core_web__$Runtime_DOMKeys.dom_dollar = 164;
+snow_core_web__$Runtime_DOMKeys.dom_percent = 165;
+snow_core_web__$Runtime_DOMKeys.dom_ampersand = 166;
+snow_core_web__$Runtime_DOMKeys.dom_underscore = 167;
+snow_core_web__$Runtime_DOMKeys.dom_leftparen = 168;
+snow_core_web__$Runtime_DOMKeys.dom_rightparen = 169;
+snow_core_web__$Runtime_DOMKeys.dom_asterisk = 170;
+snow_core_web__$Runtime_DOMKeys.dom_plus = 171;
+snow_core_web__$Runtime_DOMKeys.dom_pipe = 172;
+snow_core_web__$Runtime_DOMKeys.dom_minus = 173;
+snow_core_web__$Runtime_DOMKeys.dom_leftbrace = 174;
+snow_core_web__$Runtime_DOMKeys.dom_rightbrace = 175;
+snow_core_web__$Runtime_DOMKeys.dom_tilde = 176;
+snow_core_web__$Runtime_DOMKeys.dom_audiomute = 181;
+snow_core_web__$Runtime_DOMKeys.dom_volumedown = 182;
+snow_core_web__$Runtime_DOMKeys.dom_volumeup = 183;
+snow_core_web__$Runtime_DOMKeys.dom_comma = 188;
+snow_core_web__$Runtime_DOMKeys.dom_period = 190;
+snow_core_web__$Runtime_DOMKeys.dom_slash = 191;
+snow_core_web__$Runtime_DOMKeys.dom_backquote = 192;
+snow_core_web__$Runtime_DOMKeys.dom_leftbracket = 219;
+snow_core_web__$Runtime_DOMKeys.dom_rightbracket = 221;
+snow_core_web__$Runtime_DOMKeys.dom_backslash = 220;
+snow_core_web__$Runtime_DOMKeys.dom_quote = 222;
+snow_core_web__$Runtime_DOMKeys.dom_meta = 224;
+snow_core_web_assets_Assets.POT = true;
 snow_modules_opengl_web_GL.DEPTH_BUFFER_BIT = 256;
 snow_modules_opengl_web_GL.STENCIL_BUFFER_BIT = 1024;
 snow_modules_opengl_web_GL.COLOR_BUFFER_BIT = 16384;
@@ -12750,6 +12022,486 @@ snow_modules_opengl_web_GL.UNPACK_PREMULTIPLY_ALPHA_WEBGL = 37441;
 snow_modules_opengl_web_GL.CONTEXT_LOST_WEBGL = 37442;
 snow_modules_opengl_web_GL.UNPACK_COLORSPACE_CONVERSION_WEBGL = 37443;
 snow_modules_opengl_web_GL.BROWSER_DEFAULT_WEBGL = 37444;
+snow_modules_webaudio_Audio.half_pi = 1.5707;
+snow_systems_input_Keycodes.unknown = 0;
+snow_systems_input_Keycodes.enter = 13;
+snow_systems_input_Keycodes.escape = 27;
+snow_systems_input_Keycodes.backspace = 8;
+snow_systems_input_Keycodes.tab = 9;
+snow_systems_input_Keycodes.space = 32;
+snow_systems_input_Keycodes.exclaim = 33;
+snow_systems_input_Keycodes.quotedbl = 34;
+snow_systems_input_Keycodes.hash = 35;
+snow_systems_input_Keycodes.percent = 37;
+snow_systems_input_Keycodes.dollar = 36;
+snow_systems_input_Keycodes.ampersand = 38;
+snow_systems_input_Keycodes.quote = 39;
+snow_systems_input_Keycodes.leftparen = 40;
+snow_systems_input_Keycodes.rightparen = 41;
+snow_systems_input_Keycodes.asterisk = 42;
+snow_systems_input_Keycodes.plus = 43;
+snow_systems_input_Keycodes.comma = 44;
+snow_systems_input_Keycodes.minus = 45;
+snow_systems_input_Keycodes.period = 46;
+snow_systems_input_Keycodes.slash = 47;
+snow_systems_input_Keycodes.key_0 = 48;
+snow_systems_input_Keycodes.key_1 = 49;
+snow_systems_input_Keycodes.key_2 = 50;
+snow_systems_input_Keycodes.key_3 = 51;
+snow_systems_input_Keycodes.key_4 = 52;
+snow_systems_input_Keycodes.key_5 = 53;
+snow_systems_input_Keycodes.key_6 = 54;
+snow_systems_input_Keycodes.key_7 = 55;
+snow_systems_input_Keycodes.key_8 = 56;
+snow_systems_input_Keycodes.key_9 = 57;
+snow_systems_input_Keycodes.colon = 58;
+snow_systems_input_Keycodes.semicolon = 59;
+snow_systems_input_Keycodes.less = 60;
+snow_systems_input_Keycodes.equals = 61;
+snow_systems_input_Keycodes.greater = 62;
+snow_systems_input_Keycodes.question = 63;
+snow_systems_input_Keycodes.at = 64;
+snow_systems_input_Keycodes.leftbracket = 91;
+snow_systems_input_Keycodes.backslash = 92;
+snow_systems_input_Keycodes.rightbracket = 93;
+snow_systems_input_Keycodes.caret = 94;
+snow_systems_input_Keycodes.underscore = 95;
+snow_systems_input_Keycodes.backquote = 96;
+snow_systems_input_Keycodes.key_a = 97;
+snow_systems_input_Keycodes.key_b = 98;
+snow_systems_input_Keycodes.key_c = 99;
+snow_systems_input_Keycodes.key_d = 100;
+snow_systems_input_Keycodes.key_e = 101;
+snow_systems_input_Keycodes.key_f = 102;
+snow_systems_input_Keycodes.key_g = 103;
+snow_systems_input_Keycodes.key_h = 104;
+snow_systems_input_Keycodes.key_i = 105;
+snow_systems_input_Keycodes.key_j = 106;
+snow_systems_input_Keycodes.key_k = 107;
+snow_systems_input_Keycodes.key_l = 108;
+snow_systems_input_Keycodes.key_m = 109;
+snow_systems_input_Keycodes.key_n = 110;
+snow_systems_input_Keycodes.key_o = 111;
+snow_systems_input_Keycodes.key_p = 112;
+snow_systems_input_Keycodes.key_q = 113;
+snow_systems_input_Keycodes.key_r = 114;
+snow_systems_input_Keycodes.key_s = 115;
+snow_systems_input_Keycodes.key_t = 116;
+snow_systems_input_Keycodes.key_u = 117;
+snow_systems_input_Keycodes.key_v = 118;
+snow_systems_input_Keycodes.key_w = 119;
+snow_systems_input_Keycodes.key_x = 120;
+snow_systems_input_Keycodes.key_y = 121;
+snow_systems_input_Keycodes.key_z = 122;
+snow_systems_input_Keycodes.capslock = 1073741881;
+snow_systems_input_Keycodes.f1 = 1073741882;
+snow_systems_input_Keycodes.f2 = 1073741883;
+snow_systems_input_Keycodes.f3 = 1073741884;
+snow_systems_input_Keycodes.f4 = 1073741885;
+snow_systems_input_Keycodes.f5 = 1073741886;
+snow_systems_input_Keycodes.f6 = 1073741887;
+snow_systems_input_Keycodes.f7 = 1073741888;
+snow_systems_input_Keycodes.f8 = 1073741889;
+snow_systems_input_Keycodes.f9 = 1073741890;
+snow_systems_input_Keycodes.f10 = 1073741891;
+snow_systems_input_Keycodes.f11 = 1073741892;
+snow_systems_input_Keycodes.f12 = 1073741893;
+snow_systems_input_Keycodes.printscreen = 1073741894;
+snow_systems_input_Keycodes.scrolllock = 1073741895;
+snow_systems_input_Keycodes.pause = 1073741896;
+snow_systems_input_Keycodes.insert = 1073741897;
+snow_systems_input_Keycodes.home = 1073741898;
+snow_systems_input_Keycodes.pageup = 1073741899;
+snow_systems_input_Keycodes["delete"] = 127;
+snow_systems_input_Keycodes.end = 1073741901;
+snow_systems_input_Keycodes.pagedown = 1073741902;
+snow_systems_input_Keycodes.right = 1073741903;
+snow_systems_input_Keycodes.left = 1073741904;
+snow_systems_input_Keycodes.down = 1073741905;
+snow_systems_input_Keycodes.up = 1073741906;
+snow_systems_input_Keycodes.numlockclear = 1073741907;
+snow_systems_input_Keycodes.kp_divide = 1073741908;
+snow_systems_input_Keycodes.kp_multiply = 1073741909;
+snow_systems_input_Keycodes.kp_minus = 1073741910;
+snow_systems_input_Keycodes.kp_plus = 1073741911;
+snow_systems_input_Keycodes.kp_enter = 1073741912;
+snow_systems_input_Keycodes.kp_1 = 1073741913;
+snow_systems_input_Keycodes.kp_2 = 1073741914;
+snow_systems_input_Keycodes.kp_3 = 1073741915;
+snow_systems_input_Keycodes.kp_4 = 1073741916;
+snow_systems_input_Keycodes.kp_5 = 1073741917;
+snow_systems_input_Keycodes.kp_6 = 1073741918;
+snow_systems_input_Keycodes.kp_7 = 1073741919;
+snow_systems_input_Keycodes.kp_8 = 1073741920;
+snow_systems_input_Keycodes.kp_9 = 1073741921;
+snow_systems_input_Keycodes.kp_0 = 1073741922;
+snow_systems_input_Keycodes.kp_period = 1073741923;
+snow_systems_input_Keycodes.application = 1073741925;
+snow_systems_input_Keycodes.power = 1073741926;
+snow_systems_input_Keycodes.kp_equals = 1073741927;
+snow_systems_input_Keycodes.f13 = 1073741928;
+snow_systems_input_Keycodes.f14 = 1073741929;
+snow_systems_input_Keycodes.f15 = 1073741930;
+snow_systems_input_Keycodes.f16 = 1073741931;
+snow_systems_input_Keycodes.f17 = 1073741932;
+snow_systems_input_Keycodes.f18 = 1073741933;
+snow_systems_input_Keycodes.f19 = 1073741934;
+snow_systems_input_Keycodes.f20 = 1073741935;
+snow_systems_input_Keycodes.f21 = 1073741936;
+snow_systems_input_Keycodes.f22 = 1073741937;
+snow_systems_input_Keycodes.f23 = 1073741938;
+snow_systems_input_Keycodes.f24 = 1073741939;
+snow_systems_input_Keycodes.execute = 1073741940;
+snow_systems_input_Keycodes.help = 1073741941;
+snow_systems_input_Keycodes.menu = 1073741942;
+snow_systems_input_Keycodes.select = 1073741943;
+snow_systems_input_Keycodes.stop = 1073741944;
+snow_systems_input_Keycodes.again = 1073741945;
+snow_systems_input_Keycodes.undo = 1073741946;
+snow_systems_input_Keycodes.cut = 1073741947;
+snow_systems_input_Keycodes.copy = 1073741948;
+snow_systems_input_Keycodes.paste = 1073741949;
+snow_systems_input_Keycodes.find = 1073741950;
+snow_systems_input_Keycodes.mute = 1073741951;
+snow_systems_input_Keycodes.volumeup = 1073741952;
+snow_systems_input_Keycodes.volumedown = 1073741953;
+snow_systems_input_Keycodes.kp_comma = 1073741957;
+snow_systems_input_Keycodes.kp_equalsas400 = 1073741958;
+snow_systems_input_Keycodes.alterase = 1073741977;
+snow_systems_input_Keycodes.sysreq = 1073741978;
+snow_systems_input_Keycodes.cancel = 1073741979;
+snow_systems_input_Keycodes.clear = 1073741980;
+snow_systems_input_Keycodes.prior = 1073741981;
+snow_systems_input_Keycodes.return2 = 1073741982;
+snow_systems_input_Keycodes.separator = 1073741983;
+snow_systems_input_Keycodes.out = 1073741984;
+snow_systems_input_Keycodes.oper = 1073741985;
+snow_systems_input_Keycodes.clearagain = 1073741986;
+snow_systems_input_Keycodes.crsel = 1073741987;
+snow_systems_input_Keycodes.exsel = 1073741988;
+snow_systems_input_Keycodes.kp_00 = 1073742000;
+snow_systems_input_Keycodes.kp_000 = 1073742001;
+snow_systems_input_Keycodes.thousandsseparator = 1073742002;
+snow_systems_input_Keycodes.decimalseparator = 1073742003;
+snow_systems_input_Keycodes.currencyunit = 1073742004;
+snow_systems_input_Keycodes.currencysubunit = 1073742005;
+snow_systems_input_Keycodes.kp_leftparen = 1073742006;
+snow_systems_input_Keycodes.kp_rightparen = 1073742007;
+snow_systems_input_Keycodes.kp_leftbrace = 1073742008;
+snow_systems_input_Keycodes.kp_rightbrace = 1073742009;
+snow_systems_input_Keycodes.kp_tab = 1073742010;
+snow_systems_input_Keycodes.kp_backspace = 1073742011;
+snow_systems_input_Keycodes.kp_a = 1073742012;
+snow_systems_input_Keycodes.kp_b = 1073742013;
+snow_systems_input_Keycodes.kp_c = 1073742014;
+snow_systems_input_Keycodes.kp_d = 1073742015;
+snow_systems_input_Keycodes.kp_e = 1073742016;
+snow_systems_input_Keycodes.kp_f = 1073742017;
+snow_systems_input_Keycodes.kp_xor = 1073742018;
+snow_systems_input_Keycodes.kp_power = 1073742019;
+snow_systems_input_Keycodes.kp_percent = 1073742020;
+snow_systems_input_Keycodes.kp_less = 1073742021;
+snow_systems_input_Keycodes.kp_greater = 1073742022;
+snow_systems_input_Keycodes.kp_ampersand = 1073742023;
+snow_systems_input_Keycodes.kp_dblampersand = 1073742024;
+snow_systems_input_Keycodes.kp_verticalbar = 1073742025;
+snow_systems_input_Keycodes.kp_dblverticalbar = 1073742026;
+snow_systems_input_Keycodes.kp_colon = 1073742027;
+snow_systems_input_Keycodes.kp_hash = 1073742028;
+snow_systems_input_Keycodes.kp_space = 1073742029;
+snow_systems_input_Keycodes.kp_at = 1073742030;
+snow_systems_input_Keycodes.kp_exclam = 1073742031;
+snow_systems_input_Keycodes.kp_memstore = 1073742032;
+snow_systems_input_Keycodes.kp_memrecall = 1073742033;
+snow_systems_input_Keycodes.kp_memclear = 1073742034;
+snow_systems_input_Keycodes.kp_memadd = 1073742035;
+snow_systems_input_Keycodes.kp_memsubtract = 1073742036;
+snow_systems_input_Keycodes.kp_memmultiply = 1073742037;
+snow_systems_input_Keycodes.kp_memdivide = 1073742038;
+snow_systems_input_Keycodes.kp_plusminus = 1073742039;
+snow_systems_input_Keycodes.kp_clear = 1073742040;
+snow_systems_input_Keycodes.kp_clearentry = 1073742041;
+snow_systems_input_Keycodes.kp_binary = 1073742042;
+snow_systems_input_Keycodes.kp_octal = 1073742043;
+snow_systems_input_Keycodes.kp_decimal = 1073742044;
+snow_systems_input_Keycodes.kp_hexadecimal = 1073742045;
+snow_systems_input_Keycodes.lctrl = 1073742048;
+snow_systems_input_Keycodes.lshift = 1073742049;
+snow_systems_input_Keycodes.lalt = 1073742050;
+snow_systems_input_Keycodes.lmeta = 1073742051;
+snow_systems_input_Keycodes.rctrl = 1073742052;
+snow_systems_input_Keycodes.rshift = 1073742053;
+snow_systems_input_Keycodes.ralt = 1073742054;
+snow_systems_input_Keycodes.rmeta = 1073742055;
+snow_systems_input_Keycodes.mode = 1073742081;
+snow_systems_input_Keycodes.audionext = 1073742082;
+snow_systems_input_Keycodes.audioprev = 1073742083;
+snow_systems_input_Keycodes.audiostop = 1073742084;
+snow_systems_input_Keycodes.audioplay = 1073742085;
+snow_systems_input_Keycodes.audiomute = 1073742086;
+snow_systems_input_Keycodes.mediaselect = 1073742087;
+snow_systems_input_Keycodes.www = 1073742088;
+snow_systems_input_Keycodes.mail = 1073742089;
+snow_systems_input_Keycodes.calculator = 1073742090;
+snow_systems_input_Keycodes.computer = 1073742091;
+snow_systems_input_Keycodes.ac_search = 1073742092;
+snow_systems_input_Keycodes.ac_home = 1073742093;
+snow_systems_input_Keycodes.ac_back = 1073742094;
+snow_systems_input_Keycodes.ac_forward = 1073742095;
+snow_systems_input_Keycodes.ac_stop = 1073742096;
+snow_systems_input_Keycodes.ac_refresh = 1073742097;
+snow_systems_input_Keycodes.ac_bookmarks = 1073742098;
+snow_systems_input_Keycodes.brightnessdown = 1073742099;
+snow_systems_input_Keycodes.brightnessup = 1073742100;
+snow_systems_input_Keycodes.displayswitch = 1073742101;
+snow_systems_input_Keycodes.kbdillumtoggle = 1073742102;
+snow_systems_input_Keycodes.kbdillumdown = 1073742103;
+snow_systems_input_Keycodes.kbdillumup = 1073742104;
+snow_systems_input_Keycodes.eject = 1073742105;
+snow_systems_input_Keycodes.sleep = 1073742106;
+snow_systems_input_Scancodes.MASK = 1073741824;
+snow_systems_input_Scancodes.unknown = 0;
+snow_systems_input_Scancodes.key_a = 4;
+snow_systems_input_Scancodes.key_b = 5;
+snow_systems_input_Scancodes.key_c = 6;
+snow_systems_input_Scancodes.key_d = 7;
+snow_systems_input_Scancodes.key_e = 8;
+snow_systems_input_Scancodes.key_f = 9;
+snow_systems_input_Scancodes.key_g = 10;
+snow_systems_input_Scancodes.key_h = 11;
+snow_systems_input_Scancodes.key_i = 12;
+snow_systems_input_Scancodes.key_j = 13;
+snow_systems_input_Scancodes.key_k = 14;
+snow_systems_input_Scancodes.key_l = 15;
+snow_systems_input_Scancodes.key_m = 16;
+snow_systems_input_Scancodes.key_n = 17;
+snow_systems_input_Scancodes.key_o = 18;
+snow_systems_input_Scancodes.key_p = 19;
+snow_systems_input_Scancodes.key_q = 20;
+snow_systems_input_Scancodes.key_r = 21;
+snow_systems_input_Scancodes.key_s = 22;
+snow_systems_input_Scancodes.key_t = 23;
+snow_systems_input_Scancodes.key_u = 24;
+snow_systems_input_Scancodes.key_v = 25;
+snow_systems_input_Scancodes.key_w = 26;
+snow_systems_input_Scancodes.key_x = 27;
+snow_systems_input_Scancodes.key_y = 28;
+snow_systems_input_Scancodes.key_z = 29;
+snow_systems_input_Scancodes.key_1 = 30;
+snow_systems_input_Scancodes.key_2 = 31;
+snow_systems_input_Scancodes.key_3 = 32;
+snow_systems_input_Scancodes.key_4 = 33;
+snow_systems_input_Scancodes.key_5 = 34;
+snow_systems_input_Scancodes.key_6 = 35;
+snow_systems_input_Scancodes.key_7 = 36;
+snow_systems_input_Scancodes.key_8 = 37;
+snow_systems_input_Scancodes.key_9 = 38;
+snow_systems_input_Scancodes.key_0 = 39;
+snow_systems_input_Scancodes.enter = 40;
+snow_systems_input_Scancodes.escape = 41;
+snow_systems_input_Scancodes.backspace = 42;
+snow_systems_input_Scancodes.tab = 43;
+snow_systems_input_Scancodes.space = 44;
+snow_systems_input_Scancodes.minus = 45;
+snow_systems_input_Scancodes.equals = 46;
+snow_systems_input_Scancodes.leftbracket = 47;
+snow_systems_input_Scancodes.rightbracket = 48;
+snow_systems_input_Scancodes.backslash = 49;
+snow_systems_input_Scancodes.nonushash = 50;
+snow_systems_input_Scancodes.semicolon = 51;
+snow_systems_input_Scancodes.apostrophe = 52;
+snow_systems_input_Scancodes.grave = 53;
+snow_systems_input_Scancodes.comma = 54;
+snow_systems_input_Scancodes.period = 55;
+snow_systems_input_Scancodes.slash = 56;
+snow_systems_input_Scancodes.capslock = 57;
+snow_systems_input_Scancodes.f1 = 58;
+snow_systems_input_Scancodes.f2 = 59;
+snow_systems_input_Scancodes.f3 = 60;
+snow_systems_input_Scancodes.f4 = 61;
+snow_systems_input_Scancodes.f5 = 62;
+snow_systems_input_Scancodes.f6 = 63;
+snow_systems_input_Scancodes.f7 = 64;
+snow_systems_input_Scancodes.f8 = 65;
+snow_systems_input_Scancodes.f9 = 66;
+snow_systems_input_Scancodes.f10 = 67;
+snow_systems_input_Scancodes.f11 = 68;
+snow_systems_input_Scancodes.f12 = 69;
+snow_systems_input_Scancodes.printscreen = 70;
+snow_systems_input_Scancodes.scrolllock = 71;
+snow_systems_input_Scancodes.pause = 72;
+snow_systems_input_Scancodes.insert = 73;
+snow_systems_input_Scancodes.home = 74;
+snow_systems_input_Scancodes.pageup = 75;
+snow_systems_input_Scancodes["delete"] = 76;
+snow_systems_input_Scancodes.end = 77;
+snow_systems_input_Scancodes.pagedown = 78;
+snow_systems_input_Scancodes.right = 79;
+snow_systems_input_Scancodes.left = 80;
+snow_systems_input_Scancodes.down = 81;
+snow_systems_input_Scancodes.up = 82;
+snow_systems_input_Scancodes.numlockclear = 83;
+snow_systems_input_Scancodes.kp_divide = 84;
+snow_systems_input_Scancodes.kp_multiply = 85;
+snow_systems_input_Scancodes.kp_minus = 86;
+snow_systems_input_Scancodes.kp_plus = 87;
+snow_systems_input_Scancodes.kp_enter = 88;
+snow_systems_input_Scancodes.kp_1 = 89;
+snow_systems_input_Scancodes.kp_2 = 90;
+snow_systems_input_Scancodes.kp_3 = 91;
+snow_systems_input_Scancodes.kp_4 = 92;
+snow_systems_input_Scancodes.kp_5 = 93;
+snow_systems_input_Scancodes.kp_6 = 94;
+snow_systems_input_Scancodes.kp_7 = 95;
+snow_systems_input_Scancodes.kp_8 = 96;
+snow_systems_input_Scancodes.kp_9 = 97;
+snow_systems_input_Scancodes.kp_0 = 98;
+snow_systems_input_Scancodes.kp_period = 99;
+snow_systems_input_Scancodes.nonusbackslash = 100;
+snow_systems_input_Scancodes.application = 101;
+snow_systems_input_Scancodes.power = 102;
+snow_systems_input_Scancodes.kp_equals = 103;
+snow_systems_input_Scancodes.f13 = 104;
+snow_systems_input_Scancodes.f14 = 105;
+snow_systems_input_Scancodes.f15 = 106;
+snow_systems_input_Scancodes.f16 = 107;
+snow_systems_input_Scancodes.f17 = 108;
+snow_systems_input_Scancodes.f18 = 109;
+snow_systems_input_Scancodes.f19 = 110;
+snow_systems_input_Scancodes.f20 = 111;
+snow_systems_input_Scancodes.f21 = 112;
+snow_systems_input_Scancodes.f22 = 113;
+snow_systems_input_Scancodes.f23 = 114;
+snow_systems_input_Scancodes.f24 = 115;
+snow_systems_input_Scancodes.execute = 116;
+snow_systems_input_Scancodes.help = 117;
+snow_systems_input_Scancodes.menu = 118;
+snow_systems_input_Scancodes.select = 119;
+snow_systems_input_Scancodes.stop = 120;
+snow_systems_input_Scancodes.again = 121;
+snow_systems_input_Scancodes.undo = 122;
+snow_systems_input_Scancodes.cut = 123;
+snow_systems_input_Scancodes.copy = 124;
+snow_systems_input_Scancodes.paste = 125;
+snow_systems_input_Scancodes.find = 126;
+snow_systems_input_Scancodes.mute = 127;
+snow_systems_input_Scancodes.volumeup = 128;
+snow_systems_input_Scancodes.volumedown = 129;
+snow_systems_input_Scancodes.kp_comma = 133;
+snow_systems_input_Scancodes.kp_equalsas400 = 134;
+snow_systems_input_Scancodes.international1 = 135;
+snow_systems_input_Scancodes.international2 = 136;
+snow_systems_input_Scancodes.international3 = 137;
+snow_systems_input_Scancodes.international4 = 138;
+snow_systems_input_Scancodes.international5 = 139;
+snow_systems_input_Scancodes.international6 = 140;
+snow_systems_input_Scancodes.international7 = 141;
+snow_systems_input_Scancodes.international8 = 142;
+snow_systems_input_Scancodes.international9 = 143;
+snow_systems_input_Scancodes.lang1 = 144;
+snow_systems_input_Scancodes.lang2 = 145;
+snow_systems_input_Scancodes.lang3 = 146;
+snow_systems_input_Scancodes.lang4 = 147;
+snow_systems_input_Scancodes.lang5 = 148;
+snow_systems_input_Scancodes.lang6 = 149;
+snow_systems_input_Scancodes.lang7 = 150;
+snow_systems_input_Scancodes.lang8 = 151;
+snow_systems_input_Scancodes.lang9 = 152;
+snow_systems_input_Scancodes.alterase = 153;
+snow_systems_input_Scancodes.sysreq = 154;
+snow_systems_input_Scancodes.cancel = 155;
+snow_systems_input_Scancodes.clear = 156;
+snow_systems_input_Scancodes.prior = 157;
+snow_systems_input_Scancodes.return2 = 158;
+snow_systems_input_Scancodes.separator = 159;
+snow_systems_input_Scancodes.out = 160;
+snow_systems_input_Scancodes.oper = 161;
+snow_systems_input_Scancodes.clearagain = 162;
+snow_systems_input_Scancodes.crsel = 163;
+snow_systems_input_Scancodes.exsel = 164;
+snow_systems_input_Scancodes.kp_00 = 176;
+snow_systems_input_Scancodes.kp_000 = 177;
+snow_systems_input_Scancodes.thousandsseparator = 178;
+snow_systems_input_Scancodes.decimalseparator = 179;
+snow_systems_input_Scancodes.currencyunit = 180;
+snow_systems_input_Scancodes.currencysubunit = 181;
+snow_systems_input_Scancodes.kp_leftparen = 182;
+snow_systems_input_Scancodes.kp_rightparen = 183;
+snow_systems_input_Scancodes.kp_leftbrace = 184;
+snow_systems_input_Scancodes.kp_rightbrace = 185;
+snow_systems_input_Scancodes.kp_tab = 186;
+snow_systems_input_Scancodes.kp_backspace = 187;
+snow_systems_input_Scancodes.kp_a = 188;
+snow_systems_input_Scancodes.kp_b = 189;
+snow_systems_input_Scancodes.kp_c = 190;
+snow_systems_input_Scancodes.kp_d = 191;
+snow_systems_input_Scancodes.kp_e = 192;
+snow_systems_input_Scancodes.kp_f = 193;
+snow_systems_input_Scancodes.kp_xor = 194;
+snow_systems_input_Scancodes.kp_power = 195;
+snow_systems_input_Scancodes.kp_percent = 196;
+snow_systems_input_Scancodes.kp_less = 197;
+snow_systems_input_Scancodes.kp_greater = 198;
+snow_systems_input_Scancodes.kp_ampersand = 199;
+snow_systems_input_Scancodes.kp_dblampersand = 200;
+snow_systems_input_Scancodes.kp_verticalbar = 201;
+snow_systems_input_Scancodes.kp_dblverticalbar = 202;
+snow_systems_input_Scancodes.kp_colon = 203;
+snow_systems_input_Scancodes.kp_hash = 204;
+snow_systems_input_Scancodes.kp_space = 205;
+snow_systems_input_Scancodes.kp_at = 206;
+snow_systems_input_Scancodes.kp_exclam = 207;
+snow_systems_input_Scancodes.kp_memstore = 208;
+snow_systems_input_Scancodes.kp_memrecall = 209;
+snow_systems_input_Scancodes.kp_memclear = 210;
+snow_systems_input_Scancodes.kp_memadd = 211;
+snow_systems_input_Scancodes.kp_memsubtract = 212;
+snow_systems_input_Scancodes.kp_memmultiply = 213;
+snow_systems_input_Scancodes.kp_memdivide = 214;
+snow_systems_input_Scancodes.kp_plusminus = 215;
+snow_systems_input_Scancodes.kp_clear = 216;
+snow_systems_input_Scancodes.kp_clearentry = 217;
+snow_systems_input_Scancodes.kp_binary = 218;
+snow_systems_input_Scancodes.kp_octal = 219;
+snow_systems_input_Scancodes.kp_decimal = 220;
+snow_systems_input_Scancodes.kp_hexadecimal = 221;
+snow_systems_input_Scancodes.lctrl = 224;
+snow_systems_input_Scancodes.lshift = 225;
+snow_systems_input_Scancodes.lalt = 226;
+snow_systems_input_Scancodes.lmeta = 227;
+snow_systems_input_Scancodes.rctrl = 228;
+snow_systems_input_Scancodes.rshift = 229;
+snow_systems_input_Scancodes.ralt = 230;
+snow_systems_input_Scancodes.rmeta = 231;
+snow_systems_input_Scancodes.mode = 257;
+snow_systems_input_Scancodes.audionext = 258;
+snow_systems_input_Scancodes.audioprev = 259;
+snow_systems_input_Scancodes.audiostop = 260;
+snow_systems_input_Scancodes.audioplay = 261;
+snow_systems_input_Scancodes.audiomute = 262;
+snow_systems_input_Scancodes.mediaselect = 263;
+snow_systems_input_Scancodes.www = 264;
+snow_systems_input_Scancodes.mail = 265;
+snow_systems_input_Scancodes.calculator = 266;
+snow_systems_input_Scancodes.computer = 267;
+snow_systems_input_Scancodes.ac_search = 268;
+snow_systems_input_Scancodes.ac_home = 269;
+snow_systems_input_Scancodes.ac_back = 270;
+snow_systems_input_Scancodes.ac_forward = 271;
+snow_systems_input_Scancodes.ac_stop = 272;
+snow_systems_input_Scancodes.ac_refresh = 273;
+snow_systems_input_Scancodes.ac_bookmarks = 274;
+snow_systems_input_Scancodes.brightnessdown = 275;
+snow_systems_input_Scancodes.brightnessup = 276;
+snow_systems_input_Scancodes.displayswitch = 277;
+snow_systems_input_Scancodes.kbdillumtoggle = 278;
+snow_systems_input_Scancodes.kbdillumdown = 279;
+snow_systems_input_Scancodes.kbdillumup = 280;
+snow_systems_input_Scancodes.eject = 281;
+snow_systems_input_Scancodes.sleep = 282;
+snow_systems_input_Scancodes.app1 = 283;
+snow_systems_input_Scancodes.app2 = 284;
+snow_systems_input_Scancodes.scancode_names = [null,null,null,null,"A","B","C","D","E","F","G","H","I","J","K","L","M","N","O","P","Q","R","S","T","U","V","W","X","Y","Z","1","2","3","4","5","6","7","8","9","0","Enter","Escape","Backspace","Tab","Space","-","=","[","]","\\","#",";","'","`",",",".","/","CapsLock","F1","F2","F3","F4","F5","F6","F7","F8","F9","F10","F11","F12","PrintScreen","ScrollLock","Pause","Insert","Home","PageUp","Delete","End","PageDown","Right","Left","Down","Up","Numlock","Keypad /","Keypad *","Keypad -","Keypad +","Keypad Enter","Keypad 1","Keypad 2","Keypad 3","Keypad 4","Keypad 5","Keypad 6","Keypad 7","Keypad 8","Keypad 9","Keypad 0","Keypad .",null,"Application","Power","Keypad =","F13","F14","F15","F16","F17","F18","F19","F20","F21","F22","F23","F24","Execute","Help","Menu","Select","Stop","Again","Undo","Cut","Copy","Paste","Find","Mute","VolumeUp","VolumeDown",null,null,null,"Keypad ,","Keypad = (AS400)",null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,"AltErase","SysReq","Cancel","Clear","Prior","Enter","Separator","Out","Oper","Clear / Again","CrSel","ExSel",null,null,null,null,null,null,null,null,null,null,null,"Keypad 00","Keypad 000","ThousandsSeparator","DecimalSeparator","CurrencyUnit","CurrencySubUnit","Keypad (","Keypad )","Keypad {","Keypad }","Keypad Tab","Keypad Backspace","Keypad A","Keypad B","Keypad C","Keypad D","Keypad E","Keypad F","Keypad XOR","Keypad ^","Keypad %","Keypad <","Keypad >","Keypad &","Keypad &&","Keypad |","Keypad ||","Keypad :","Keypad #","Keypad Space","Keypad @","Keypad !","Keypad MemStore","Keypad MemRecall","Keypad MemClear","Keypad MemAdd","Keypad MemSubtract","Keypad MemMultiply","Keypad MemDivide","Keypad +/-","Keypad Clear","Keypad ClearEntry","Keypad Binary","Keypad Octal","Keypad Decimal","Keypad Hexadecimal",null,null,"Left Ctrl","Left Shift","Left Alt","Left Meta","Right Ctrl","Right Shift","Right Alt","Right Meta",null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,"ModeSwitch","AudioNext","AudioPrev","AudioStop","AudioPlay","AudioMute","MediaSelect","WWW","Mail","Calculator","Computer","AC Search","AC Home","AC Back","AC Forward","AC Stop","AC Refresh","AC Bookmarks","BrightnessDown","BrightnessUp","DisplaySwitch","KBDIllumToggle","KBDIllumDown","KBDIllumUp","Eject","Sleep"];
 snow_types_Config.app_runtime = "snow.core.web.Runtime";
 snow_types_Config.app_config = "config.json";
 snow_types_Config.app_ident = "com.haxiomic.gpufluid";
@@ -12764,15 +12516,62 @@ snow_types__$Types_AssetType_$Impl_$.at_text = 2;
 snow_types__$Types_AssetType_$Impl_$.at_json = 3;
 snow_types__$Types_AssetType_$Impl_$.at_image = 4;
 snow_types__$Types_AssetType_$Impl_$.at_audio = 5;
+snow_types__$Types_AudioFormatType_$Impl_$.af_unknown = 0;
+snow_types__$Types_AudioFormatType_$Impl_$.af_custom = 1;
+snow_types__$Types_AudioFormatType_$Impl_$.af_ogg = 2;
+snow_types__$Types_AudioFormatType_$Impl_$.af_wav = 3;
+snow_types__$Types_AudioFormatType_$Impl_$.af_pcm = 4;
+snow_types__$Types_AudioEvent_$Impl_$.ae_end = 0;
+snow_types__$Types_AudioEvent_$Impl_$.ae_destroyed = 1;
+snow_types__$Types_AudioEvent_$Impl_$.ae_destroyed_source = 2;
+snow_types__$Types_AudioState_$Impl_$.as_invalid = -1;
+snow_types__$Types_AudioState_$Impl_$.as_paused = 0;
+snow_types__$Types_AudioState_$Impl_$.as_playing = 1;
+snow_types__$Types_AudioState_$Impl_$.as_stopped = 2;
 snow_types__$Types_OpenGLProfile_$Impl_$.compatibility = 0;
 snow_types__$Types_OpenGLProfile_$Impl_$.core = 1;
 snow_types__$Types_OpenGLProfile_$Impl_$.gles = 2;
 snow_types__$Types_KeyEventType_$Impl_$.ke_unknown = 0;
 snow_types__$Types_KeyEventType_$Impl_$.ke_down = 1;
 snow_types__$Types_KeyEventType_$Impl_$.ke_up = 2;
+snow_types__$Types_MouseEventType_$Impl_$.me_unknown = 0;
+snow_types__$Types_MouseEventType_$Impl_$.me_move = 1;
+snow_types__$Types_MouseEventType_$Impl_$.me_down = 2;
+snow_types__$Types_MouseEventType_$Impl_$.me_up = 3;
+snow_types__$Types_MouseEventType_$Impl_$.me_wheel = 4;
+snow_types__$Types_TouchEventType_$Impl_$.te_unknown = 0;
+snow_types__$Types_TouchEventType_$Impl_$.te_move = 1;
+snow_types__$Types_TouchEventType_$Impl_$.te_down = 2;
+snow_types__$Types_TouchEventType_$Impl_$.te_up = 3;
+snow_types__$Types_GamepadEventType_$Impl_$.ge_unknown = 0;
+snow_types__$Types_GamepadEventType_$Impl_$.ge_axis = 1;
+snow_types__$Types_GamepadEventType_$Impl_$.ge_down = 2;
+snow_types__$Types_GamepadEventType_$Impl_$.ge_up = 3;
+snow_types__$Types_GamepadEventType_$Impl_$.ge_device = 4;
 snow_types__$Types_TextEventType_$Impl_$.te_unknown = 0;
 snow_types__$Types_TextEventType_$Impl_$.te_edit = 1;
 snow_types__$Types_TextEventType_$Impl_$.te_input = 2;
+snow_types__$Types_GamepadDeviceEventType_$Impl_$.ge_unknown = 0;
+snow_types__$Types_GamepadDeviceEventType_$Impl_$.ge_device_added = 1;
+snow_types__$Types_GamepadDeviceEventType_$Impl_$.ge_device_removed = 2;
+snow_types__$Types_GamepadDeviceEventType_$Impl_$.ge_device_remapped = 3;
+snow_types__$Types_SystemEventType_$Impl_$.se_unknown = 0;
+snow_types__$Types_SystemEventType_$Impl_$.se_init = 1;
+snow_types__$Types_SystemEventType_$Impl_$.se_ready = 2;
+snow_types__$Types_SystemEventType_$Impl_$.se_tick = 3;
+snow_types__$Types_SystemEventType_$Impl_$.se_freeze = 4;
+snow_types__$Types_SystemEventType_$Impl_$.se_unfreeze = 5;
+snow_types__$Types_SystemEventType_$Impl_$.se_suspend = 6;
+snow_types__$Types_SystemEventType_$Impl_$.se_shutdown = 7;
+snow_types__$Types_SystemEventType_$Impl_$.se_window = 8;
+snow_types__$Types_SystemEventType_$Impl_$.se_input = 9;
+snow_types__$Types_SystemEventType_$Impl_$.se_quit = 10;
+snow_types__$Types_SystemEventType_$Impl_$.se_app_terminating = 11;
+snow_types__$Types_SystemEventType_$Impl_$.se_app_lowmemory = 12;
+snow_types__$Types_SystemEventType_$Impl_$.se_app_willenterbackground = 13;
+snow_types__$Types_SystemEventType_$Impl_$.se_app_didenterbackground = 14;
+snow_types__$Types_SystemEventType_$Impl_$.se_app_willenterforeground = 15;
+snow_types__$Types_SystemEventType_$Impl_$.se_app_didenterforeground = 16;
 snow_types__$Types_WindowEventType_$Impl_$.we_unknown = 0;
 snow_types__$Types_WindowEventType_$Impl_$.we_shown = 1;
 snow_types__$Types_WindowEventType_$Impl_$.we_hidden = 2;
