@@ -13,11 +13,12 @@ let sketch = function(s) {
     };
 
     s.setup = function() {
-	s.createCanvas(innerWidth, innerHeight);
+	s.createCanvas(s.windowWidth, s.windowHeight);
 
 	let cv = document.getElementById("defaultCanvas0");
-	cv.style.width="auto";
-	cv.style.height ="auto";
+	// cv.style.width="auto";
+	// cv.style.height ="auto";
+	cv.style.display ="block";
 
 	swapFragShader(gpu_fluid_main.fluid.applyForcesShader, "/shaders/glsl/mouseforce.frag.glsl");
 
@@ -29,6 +30,10 @@ let sketch = function(s) {
 	    flock.addBoid(b);
 	}
     };
+
+    s.windowResized = function() {
+        s.resizeCanvas(s.windowWidth, s.windowHeight);
+    }
 
     s.draw = function() {
 	s.background(10, 100);
