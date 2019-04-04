@@ -129,8 +129,7 @@ let sketch = function(s) {
 
     //follow the fluid
     Boid.prototype.follow = function() {
-        // let desired = readVelocityAt(Math.floor(window.innerWidth - this.position.x), Math.floor(window.innerHeight - this.position.y));
-        let desired = readVelocityAt(this.position.x, this.position.y);
+        let desired = readVelocityAt(Math.floor(window.innerWidth - this.position.x), Math.floor(window.innerHeight - this.position.y));
         desired.normalize();
         desired.mult(this.maxspeed);
 
