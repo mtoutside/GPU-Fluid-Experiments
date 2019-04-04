@@ -36,13 +36,14 @@ let sketch = function(s) {
     }
 
     s.draw = function() {
-	s.background(10, 100);
+    s.clear();
 	flock.run();
     };
 
     // Add a new boid into the System
     s.mouseDragged = function() {
 	flock.addBoid(new Boid(s.mouseX, s.mouseY));
+        console.log(readVelocityAt(s.mouseX, s.mouseY));
     };
 
     // The Nature of Code
@@ -74,7 +75,7 @@ let sketch = function(s) {
     // Boid class
     // Methods for Separation, Cohesion, Alignment added
 
-    // connecting GPU
+    // Reading GPU Colors
     readVelocityAt = function (x, y) {
 	let pixel = new Float32Array(4); //1pxの情報を格納する配列 RGBAだから4.
 	let velocityFBO = gpu_fluid_main.fluid.velocityRenderTarget.readFrameBufferObject;
@@ -98,8 +99,8 @@ let sketch = function(s) {
     };
 
     Boid.prototype.run = function(boids) {
-	this.flock(boids);
-	// this.follow();
+	// this.flock(boids);
+	this.follow();
 	this.update();
 	this.borders();
 	this.render();
@@ -128,23 +129,21 @@ let sketch = function(s) {
 
     //follow the fluid
     Boid.prototype.follow = function() {
-        let v = readVelocityAt(Math.floor(window.innerWidth - this.position.x), Math.floor(window.innerHeight - this.position.y));
-        let desired = s.createVector(v);
-        v.mult(1.5);
+        // let desired = readVelocityAt(Math.floor(window.innerWidth - this.position.x), Math.floor(window.innerHeight - this.position.y));
+        let desired = readVelocityAt(this.position.x, this.position.y);
+        desired.normalize();
         desired.mult(this.maxspeed);
 
         let steer = p5.Vector.sub(desired, this.velocity);
         steer.limit(this.maxforce);
         this.applyForce(steer);
+        // this.position.add(steer);
     }
 
     // Method to update location
     Boid.prototype.update = function() {
 	// Update velocity
 	this.velocity.add(this.acceleration);
-        let v = readVelocityAt(Math.floor(window.innerWidth - this.position.x), Math.floor(window.innerHeight - this.position.y));
-        v.mult(0.5);
-        this.velocity.add(v);
 	// Limit speed
         this.velocity.limit(this.maxspeed);
 	this.position.add(this.velocity);
