@@ -94,7 +94,7 @@ let sketch = function(s) {
 	this.position = s.createVector(x, y);
 	this.r = 3.0;
 	this.maxspeed = 3;    // Maximum speed
-	this.maxforce = 0.3; // Maximum steering force
+	this.maxforce = 0.2; // Maximum steering force
     };
 
     Boid.prototype.run = function(boids) {
@@ -274,13 +274,13 @@ let sketch = function(s) {
     // Chasing Mouse
     Boid.prototype.arrive = function(x, y) {
         let target = s.createVector(x, y);
-        let neighbordist = 50;
+        let neighbordist = 100;
 
         let d = p5.Vector.dist(this.position,target);
         let steer = s.createVector(0, 0);
+
         s.noFill();
         s.ellipse(s.mouseX, s.mouseY, d, d);
-        s.line(s.mouseX, s.mouseY, this.position.x, this.position.y);
         s.strokeWeight(0.3);
         if ((d > 0) && (d < neighbordist)) {
             steer = this.seek(target);  // Chaseing mouse
