@@ -99,7 +99,7 @@ let sketch = function(s) {
     };
 
     Boid.prototype.run = function(boids) {
-	// this.flock(boids);
+	this.flock(boids);
 	this.follow();
 	this.update();
 	this.borders();
@@ -257,8 +257,8 @@ let sketch = function(s) {
 	for (let i = 0; i < boids.length; i++) {
 	    let d = p5.Vector.dist(this.position,boids[i].position);
 	    if ((d > 0) && (d < neighbordist)) {
-	    // sum.add(s.mouseX, s.mouseY);  // Chaseing mouse
-	     sum.add(boids[i].position); // Add location
+	    sum.add(s.mouseX, s.mouseY);  // Chaseing mouse
+	     // sum.add(boids[i].position); // Add location
 	    count++;
 	    }
 	}
