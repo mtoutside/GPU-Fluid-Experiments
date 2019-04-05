@@ -43,7 +43,6 @@ let sketch = function(s) {
     // Add a new boid into the System
     s.mouseDragged = function() {
 	flock.addBoid(new Boid(s.mouseX, s.mouseY));
-        console.log(readVelocityAt(s.mouseX, s.mouseY));
     };
 
     // The Nature of Code
@@ -100,6 +99,7 @@ let sketch = function(s) {
 
     Boid.prototype.run = function(boids) {
 	this.flock(boids);
+    this.arrive(s.mouseX, s.mouseY);
 	this.follow();
 	this.update();
 	this.borders();
@@ -257,8 +257,8 @@ let sketch = function(s) {
 	for (let i = 0; i < boids.length; i++) {
 	    let d = p5.Vector.dist(this.position,boids[i].position);
 	    if ((d > 0) && (d < neighbordist)) {
-	    sum.add(s.mouseX, s.mouseY);  // Chaseing mouse
-	     // sum.add(boids[i].position); // Add location
+	    // sum.add(s.mouseX, s.mouseY);  // Chaseing mouse
+	     sum.add(boids[i].position); // Add location
 	    count++;
 	    }
 	}
@@ -269,6 +269,26 @@ let sketch = function(s) {
 	    return s.createVector(0, 0);
 	}
     };
+
+    // Arrive
+    // Chasing Mouse
+    Boid.prototype.arrive = function(x, y) {
+        let target = s.createVector(x, y);
+        let neighbordist = 50;
+
+        let d = p5.Vector.dist(this.position,target);
+        let steer = s.createVector(0, 0);
+        s.noFill();
+        s.ellipse(s.mouseX, s.mouseY, d, d);
+        s.line(s.mouseX, s.mouseY, this.position.x, this.position.y);
+        s.strokeWeight(0.3);
+        if ((d > 0) && (d < neighbordist)) {
+            steer = this.seek(target);  // Chaseing mouse
+        }
+        steer.mult(2);
+        steer.limit(this.maxforce);
+        this.applyForce(steer);
+    }
 };
 
 
