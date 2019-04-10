@@ -1,6 +1,8 @@
 let sketch = function(s) {
     window.s = s;
     let flock;
+    let ship;
+
     window.fluidFieldScale = {w: gpu_fluid_main.fluid.velocityRenderTarget.width / window.innerWidth,
                               h: gpu_fluid_main.fluid.velocityRenderTarget.height / window.innerHeight }; // flow field is of size 324 * 233
     let gl = snow_modules_opengl_web_GL.gl;
@@ -13,22 +15,24 @@ let sketch = function(s) {
     };
 
     s.setup = function() {
-	s.createCanvas(s.windowWidth, s.windowHeight);
+        s.createCanvas(s.windowWidth, s.windowHeight);
 
-	let cv = document.getElementById("defaultCanvas0");
-	// cv.style.width="auto";
-	// cv.style.height ="auto";
-	cv.style.display ="block";
+        let cv = document.getElementById("defaultCanvas0");
+        // cv.style.width="auto";
+        // cv.style.height ="auto";
+        cv.style.display ="block";
 
-	swapFragShader(gpu_fluid_main.fluid.applyForcesShader, "/shaders/glsl/mouseforce.frag.glsl");
+        swapFragShader(gpu_fluid_main.fluid.applyForcesShader, "/shaders/glsl/mouseforce.frag.glsl");
 
-	flock = new Flock();
+        flock = new Flock();
         window.flock = flock;
-	// Add an initial set of boids into the system
-	for (let i = 0; i < 50; i++) {
-	    let b = new Boid(s.width / 2,s.height / 2);
-	    flock.addBoid(b);
-	}
+        // Add an initial set of boids into the system
+        for (let i = 0; i < 50; i++) {
+            let b = new Boid(s.width / 2,s.height / 2);
+            flock.addBoid(b);
+        }
+
+        ship = new Ship();
     };
 
     s.windowResized = function() {
@@ -38,6 +42,12 @@ let sketch = function(s) {
     s.draw = function() {
     s.clear();
 	flock.run();
+
+
+    ship.render();
+    ship.turn();
+    ship.update();
+    ship.edges();
     };
 
     // Add a new boid into the System
@@ -45,6 +55,83 @@ let sketch = function(s) {
 	flock.addBoid(new Boid(s.mouseX, s.mouseY));
     };
 
+	s.keyReleased = function() {
+		ship.setRotation(0);
+		ship.boosting(false);
+	}
+
+	s.keyPressed = function() {
+		if(s.key == ' ') {
+			lasers.push(new Laser(ship.pos, ship.heading));
+		} else if(s.keyCode == s.RIGHT_ARROW) {
+			ship.setRotation(0.1);
+		} else if(s.keyCode == s.LEFT_ARROW) {
+			ship.setRotation(-0.1);
+		} else if(s.keyCode == s.UP_ARROW) {
+			ship.boosting(true);
+		}
+	}
+
+	Ship = function() {
+		this.position = s.createVector(s.width / 4, s.height / 4);
+		this.r = 20;
+		this.heading = 0;
+		this.rotation = 0;
+		this.vel = s.createVector(0, 0);
+		this.isBoosting = false;
+
+		this.boosting = function(b) {
+			this.isBoosting = b;
+		}
+
+		this.update = function() {
+			if(this.isBoosting) {
+				this.boost();
+			}
+
+			this.position.add(this.vel);
+			this.vel.mult(0.95);
+		}
+
+		this.boost = function() {
+			let force = p5.Vector.fromAngle(this.heading);
+			force.mult(0.5);
+			this.vel.add(force);
+		}
+
+		this.hits = function(boids) {
+			let d = s.dist(this.position.x, this.position.y, boids.position.x, boids.position.y);
+			if(d < this.r + boids.r) {
+				return true;
+			} else {
+				return false;
+			}
+		}
+
+		this.render = function() {
+			s.push();
+			s.translate(this.position.x, this.position.y);
+			s.rotate(this.heading + s.PI / 2);
+			s.fill(0);
+			s.stroke(255);
+			s.triangle(-this.r, this.r, this.r, this.r, 0, -this.r);
+			s.pop();
+		}
+
+		this.edges = function() {
+			if (this.position.x < -this.r)  this.position.x = s.width + this.r;
+			if (this.position.y < -this.r)  this.position.y = s.height + this.r;
+			if (this.position.x > s.width + this.r) this.position.x = -this.r;
+			if (this.position.y > s.height + this.r) this.position.y = -this.r;
+		}
+		this.setRotation = function(a) {
+			this.rotation = a;
+		}
+
+		this.turn = function() {
+			this.heading += this.rotation;
+		}
+	}
     // The Nature of Code
     // Daniel Shiffman
     // http://natureofcode.com
@@ -58,11 +145,16 @@ let sketch = function(s) {
     };
 
     Flock.prototype.run = function() {
-	for (let i = 0; i < this.boids.length; i++) {
-	    this.boids[i].run(this.boids);  // Passing the entire list of boids to each boid individually
-	}
+        for (let i = 0; i < this.boids.length; i++) {
+            this.boids[i].run(this.boids);  // Passing the entire list of boids to each boid individually
+            if(ship.hits(this.boids[i])) {
+                console.log('oops');
+                this.boids.splice(i, 1);
+            }
+        }
     };
 
+  
     Flock.prototype.addBoid = function(b) {
 	this.boids.push(b);
     };
