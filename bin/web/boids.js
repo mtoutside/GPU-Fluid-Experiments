@@ -280,7 +280,7 @@ let sketch = function(s) {
         let steer = s.createVector(0, 0);
 
         s.noFill();
-        s.ellipse(s.mouseX, s.mouseY, d, d);
+        // s.ellipse(s.mouseX, s.mouseY, d, d);
         s.strokeWeight(0.3);
         if ((d > 0) && (d < neighbordist)) {
             steer = this.seek(target);  // Chaseing mouse
