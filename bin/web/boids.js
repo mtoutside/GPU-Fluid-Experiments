@@ -1,7 +1,7 @@
 let sketch = function(s) {
     window.s = s;
     let flock;
-    let ship;
+    let player;
 
     window.fluidFieldScale = {w: gpu_fluid_main.fluid.velocityRenderTarget.width / window.innerWidth,
                               h: gpu_fluid_main.fluid.velocityRenderTarget.height / window.innerHeight }; // flow field is of size 324 * 233
@@ -32,7 +32,7 @@ let sketch = function(s) {
             flock.addBoid(b);
         }
 
-        ship = new Ship();
+        player = new Player();
     };
 
     s.windowResized = function() {
@@ -44,11 +44,11 @@ let sketch = function(s) {
 	flock.run();
 
 
-    ship.render();
-    ship.move();
-    ship.turn();
-    ship.update();
-    ship.edges();
+    player.render();
+    player.move();
+    player.turn();
+    player.update();
+    player.edges();
     };
 
     // Add a new boid into the System
@@ -57,25 +57,32 @@ let sketch = function(s) {
     };
 
 	s.keyReleased = function() {
-		ship.setRotation(0);
-		ship.boosting(false);
+		player.setRotation(0);
+		player.boosting(false);
 	}
 
-	Ship = function() {
+    /**
+     * player
+     *
+     * @returns {undefined}
+     */
+	Player = function() {
 		this.position = s.createVector(s.width / 4, s.height / 4);
-		this.r = 20;
+		this.r = 10;
 		this.heading = 0;
 		this.rotation = 0;
 		this.vel = s.createVector(0, 0);
 		this.isBoosting = false;
+        this.theta = 0;
+        this.color = { filet: s.color(233, 160, 114), body: s.color(244, 69, 22) };
 
         this.move = function() {
             if(s.keyIsDown(s.RIGHT_ARROW)) {
-                ship.setRotation(0.1);
+                player.setRotation(0.1);
             } else if(s.keyIsDown(s.LEFT_ARROW)) {
-                ship.setRotation(-0.1);
+                player.setRotation(-0.1);
             } else if(s.keyIsDown(s.UP_ARROW)) {
-                ship.boosting(true);
+                player.boosting(true);
             }
         }
 
@@ -88,6 +95,8 @@ let sketch = function(s) {
 			if(this.isBoosting) {
 				this.boost();
 			}
+            
+            this.theta += s.PI / 100;
 
 			this.position.add(this.vel);
 			this.vel.mult(0.95);
@@ -110,28 +119,68 @@ let sketch = function(s) {
 
 		this.render = function() {
 			s.push();
+            s.noStroke();
 			s.translate(this.position.x, this.position.y);
 			s.rotate(this.heading + s.PI / 2);
-			s.fill(0);
-			s.stroke(255);
-			s.triangle(-this.r, this.r, this.r, this.r, 0, -this.r);
-			s.pop();
-		}
+            s.translate(0, -12); //回転軸を体の真ん中に
 
-		this.edges = function() {
-			if (this.position.x < -this.r)  this.position.x = s.width + this.r;
-			if (this.position.y < -this.r)  this.position.y = s.height + this.r;
-			if (this.position.x > s.width + this.r) this.position.x = -this.r;
-			if (this.position.y > s.height + this.r) this.position.y = -this.r;
-		}
-		this.setRotation = function(a) {
-			this.rotation = a;
-		}
+            // 左右のヒレ
+            for(let i = -1; i <= 1; i +=2) {
+                s.push();
+                s.fill(this.color.filet);
+                s.translate(0, 10);
+                s.rotate((s.PI / 12) * s.sin(this.theta * 2) * i);
 
-		this.turn = function() {
-			this.heading += this.rotation;
-		}
-	}
+                s.beginShape();
+                s.vertex(0, 0);
+                s.vertex(12 * i, 4);
+                s.vertex(10 * i, 10);
+                s.vertex(0, 4);
+                s.endShape();
+                s.pop();
+            }
+
+            // しっぽ
+            s.push();
+            s.fill(this.color.filet);
+            s.translate(0, 25);
+            s.rotate((s.PI / 12) * s.sin(this.theta * 2));
+            s.beginShape();
+            s.vertex(0, 0);
+            s.bezierVertex(0, 0, 5, 5, 3, 15);
+            s.bezierVertex(3, 15, 0, 8, 0, 8);
+            s.bezierVertex(0, 8, 0, 8, -3, 15);
+            s.bezierVertex(-3, 15, -5, 5, 0, 0);
+            s.endShape();
+            s.pop();
+
+            //胴体
+            s.beginShape();
+            s.fill(this.color.body);
+            s.vertex(0, 30);
+            s.bezierVertex(0, 30, -10, 10, 0, 0);
+            s.bezierVertex(0, 0, 10, 10, 0, 30);
+            s.endShape();
+            s.pop();
+
+            // s.triangle(-this.r, this.r, this.r, this.r, 0, -this.r);
+            // s.pop();
+        }
+
+        this.edges = function() {
+            if (this.position.x < -this.r)  this.position.x = s.width + this.r;
+            if (this.position.y < -this.r)  this.position.y = s.height + this.r;
+            if (this.position.x > s.width + this.r) this.position.x = -this.r;
+            if (this.position.y > s.height + this.r) this.position.y = -this.r;
+        }
+        this.setRotation = function(a) {
+            this.rotation = a;
+        }
+
+        this.turn = function() {
+            this.heading += this.rotation;
+        }
+    }
     // The Nature of Code
     // Daniel Shiffman
     // http://natureofcode.com
@@ -140,23 +189,23 @@ let sketch = function(s) {
     // Does very little, simply manages the array of all the boids
 
     Flock = function() {
-	// An array for all the boids
-	this.boids = []; // Initialize the array
+        // An array for all the boids
+        this.boids = []; // Initialize the array
     };
 
     Flock.prototype.run = function() {
         for (let i = 0; i < this.boids.length; i++) {
             this.boids[i].run(this.boids);  // Passing the entire list of boids to each boid individually
-            if(ship.hits(this.boids[i])) {
+            if(player.hits(this.boids[i])) {
                 console.log('oops');
                 this.boids.splice(i, 1);
             }
         }
     };
 
-  
+
     Flock.prototype.addBoid = function(b) {
-	this.boids.push(b);
+        this.boids.push(b);
     };
 
     // The Nature of Code
@@ -168,25 +217,25 @@ let sketch = function(s) {
 
     // Reading GPU Colors
     readVelocityAt = function (x, y) {
-	let pixel = new Float32Array(4); //1pxの情報を格納する配列 RGBAだから4.
-	let velocityFBO = gpu_fluid_main.fluid.velocityRenderTarget.readFrameBufferObject;
+        let pixel = new Float32Array(4); //1pxの情報を格納する配列 RGBAだから4.
+        let velocityFBO = gpu_fluid_main.fluid.velocityRenderTarget.readFrameBufferObject;
 
-	gl.bindFramebuffer(gl.FRAMEBUFFER, velocityFBO);   //velocityFBOをcurrentに
-	gl.readPixels(Math.floor(fluidFieldScale.w * x),
-                      Math.floor(fluidFieldScale.h * y),
-                      1,1,gl.RGBA, gl.FLOAT, pixel); //pixelに読み込む
-	gl.bindFramebuffer(gl.FRAMEBUFFER, null);          //FBOを戻す
+        gl.bindFramebuffer(gl.FRAMEBUFFER, velocityFBO);   //velocityFBOをcurrentに
+        gl.readPixels(Math.floor(fluidFieldScale.w * x),
+            Math.floor(fluidFieldScale.h * y),
+            1,1,gl.RGBA, gl.FLOAT, pixel); //pixelに読み込む
+        gl.bindFramebuffer(gl.FRAMEBUFFER, null);          //FBOを戻す
 
-	return s.createVector( pixel[0], pixel[1] );
+        return s.createVector( pixel[0], pixel[1] );
     };
 
     Boid = function(x, y) {
-	this.acceleration = s.createVector(0, 0);
-	this.velocity = s.createVector(s.random(-1, 1), s.random(-1, 1));
-	this.position = s.createVector(x, y);
-	this.r = 3.0;
-	this.maxspeed = 3;    // Maximum speed
-	this.maxforce = 0.2; // Maximum steering force
+        this.acceleration = s.createVector(0, 0);
+        this.velocity = s.createVector(s.random(-1, 1), s.random(-1, 1));
+        this.position = s.createVector(x, y);
+        this.r = 3.0;
+        this.maxspeed = 3;    // Maximum speed
+        this.maxforce = 0.2; // Maximum steering force
     };
 
     Boid.prototype.run = function(boids) {
