@@ -40,15 +40,17 @@ let sketch = function(s) {
     }
 
     s.draw = function() {
-    s.clear();
-	flock.run();
+        s.clear();
+        flock.run();
 
 
-    player.render();
-    player.move();
-    player.turn();
-    player.update();
-    player.edges();
+        player.render();
+        player.move();
+        player.turn();
+        player.update();
+        player.edges();
+
+        s.ellipse(300, 300, 100, 100);
     };
 
     // Add a new boid into the System
@@ -68,7 +70,7 @@ let sketch = function(s) {
      */
 	Player = function() {
 		this.position = s.createVector(s.width / 4, s.height / 4);
-		this.r = 10;
+		this.r = 15;
 		this.heading = 0;
 		this.rotation = 0;
 		this.vel = s.createVector(0, 0);
@@ -163,8 +165,6 @@ let sketch = function(s) {
             s.endShape();
             s.pop();
 
-            // s.triangle(-this.r, this.r, this.r, this.r, 0, -this.r);
-            // s.pop();
         }
 
         this.edges = function() {
