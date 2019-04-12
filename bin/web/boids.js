@@ -194,7 +194,7 @@ let sketch = function(s) {
     };
 
     Flock.prototype.run = function() {
-        for (let i = 0; i < this.boids.length; i++) {
+        for (let i = this.boids.length - 1; i >= 0;  i--) {
             this.boids[i].run(this.boids);  // Passing the entire list of boids to each boid individually
             if(player.hits(this.boids[i])) {
                 console.log('oops');
