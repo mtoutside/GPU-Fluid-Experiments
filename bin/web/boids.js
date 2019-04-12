@@ -27,7 +27,7 @@ let sketch = function(s) {
         flock = new Flock();
         window.flock = flock;
         // Add an initial set of boids into the system
-        for (let i = 0; i < 50; i++) {
+        for (let i = 0; i < 30; i++) {
             let b = new Boid(s.width / 2,s.height / 2);
             flock.addBoid(b);
         }
@@ -45,6 +45,7 @@ let sketch = function(s) {
 
 
     ship.render();
+    ship.move();
     ship.turn();
     ship.update();
     ship.edges();
@@ -60,18 +61,6 @@ let sketch = function(s) {
 		ship.boosting(false);
 	}
 
-	s.keyPressed = function() {
-		if(s.key == ' ') {
-			lasers.push(new Laser(ship.pos, ship.heading));
-		} else if(s.keyCode == s.RIGHT_ARROW) {
-			ship.setRotation(0.1);
-		} else if(s.keyCode == s.LEFT_ARROW) {
-			ship.setRotation(-0.1);
-		} else if(s.keyCode == s.UP_ARROW) {
-			ship.boosting(true);
-		}
-	}
-
 	Ship = function() {
 		this.position = s.createVector(s.width / 4, s.height / 4);
 		this.r = 20;
@@ -79,6 +68,17 @@ let sketch = function(s) {
 		this.rotation = 0;
 		this.vel = s.createVector(0, 0);
 		this.isBoosting = false;
+
+        this.move = function() {
+            if(s.keyIsDown(s.RIGHT_ARROW)) {
+                ship.setRotation(0.1);
+            } else if(s.keyIsDown(s.LEFT_ARROW)) {
+                ship.setRotation(-0.1);
+            } else if(s.keyIsDown(s.UP_ARROW)) {
+                ship.boosting(true);
+            }
+        }
+
 
 		this.boosting = function(b) {
 			this.isBoosting = b;
