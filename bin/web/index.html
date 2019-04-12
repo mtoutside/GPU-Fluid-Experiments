@@ -21,6 +21,14 @@
                 z-index: 2;
                 top: 0;
             }
+
+            #restart {
+                color: green;
+                font-size: 20px;
+                position: absolute;
+                z-index: 5;
+                cursor: pointer;
+            }
         </style>
 
         <!-- <script src="http://localhost:8080/skewer"></script> -->
@@ -28,8 +36,18 @@
     </head>
 
     <body style="padding: 0; margin: 0; background-color: #111111;">
+        <div id="restart">restart</div>
         <script type="text/javascript" src="./GPUFluid.js"></script>
         <script defer type="text/javascript" src="./boids.js"></script>
+        <script defer>
+            const restart = document.getElementById('restart');
+            restart.addEventListener('click', () => {
+                history.go(0);
+            });
+
+            restart.style.left = window.innerWidth / 2;
+            restart.style.top = window.innerHeight / 2;
+        </script>
 
     </body>
 
