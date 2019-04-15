@@ -2,6 +2,7 @@ let sketch = function(s) {
     window.s = s;
     let flock;
     let player;
+    let count = 0;
 
     window.fluidFieldScale = {w: gpu_fluid_main.fluid.velocityRenderTarget.width / window.innerWidth,
                               h: gpu_fluid_main.fluid.velocityRenderTarget.height / window.innerHeight }; // flow field is of size 324 * 233
@@ -35,6 +36,15 @@ let sketch = function(s) {
         player = new Player();
     };
 
+    let counter = window.setInterval(function() {
+        let areaX = s.random(0, s.width);
+        let areaY = s.random(0, s.height);
+        for (let i = 0; i < 30; i++) {
+            let b = new Boid(s.random(areaX - 60, areaX + 60), s.random(areaY - 30, areaY + 30));
+            flock.addBoid(b);
+        }
+    }, 30000);
+
     s.windowResized = function() {
         s.resizeCanvas(s.windowWidth, s.windowHeight);
     }
@@ -50,7 +60,9 @@ let sketch = function(s) {
         player.update();
         player.edges();
 
-        s.ellipse(300, 300, 100, 100);
+        s.textSize(32);
+        s.fill(255);
+        s.text(count, 100, 50);
     };
 
     // Add a new boid into the System
@@ -199,6 +211,7 @@ let sketch = function(s) {
             if(player.hits(this.boids[i])) {
                 console.log('oops');
                 this.boids.splice(i, 1);
+                count++;
             }
         }
     };
@@ -233,14 +246,14 @@ let sketch = function(s) {
         this.acceleration = s.createVector(0, 0);
         this.velocity = s.createVector(s.random(-1, 1), s.random(-1, 1));
         this.position = s.createVector(x, y);
-        this.r = 3.0;
+        this.r = s.random(3.0, 6.0);
         this.maxspeed = 3;    // Maximum speed
         this.maxforce = 0.2; // Maximum steering force
     };
 
     Boid.prototype.run = function(boids) {
 	this.flock(boids);
-    this.arrive(s.mouseX, s.mouseY);
+    this.arrive(player.position.x, player.position.y);
 	this.follow();
 	this.update();
 	this.borders();
@@ -415,18 +428,15 @@ let sketch = function(s) {
     // Chasing Mouse
     Boid.prototype.arrive = function(x, y) {
         let target = s.createVector(x, y);
-        let neighbordist = 100;
+        let neighbordist = 150;
 
         let d = p5.Vector.dist(this.position,target);
         let steer = s.createVector(0, 0);
 
-        s.noFill();
-        // s.ellipse(s.mouseX, s.mouseY, d, d);
-        s.strokeWeight(0.3);
         if ((d > 0) && (d < neighbordist)) {
             steer = this.seek(target);  // Chaseing mouse
         }
-        steer.mult(2);
+        steer.mult(3);
         steer.limit(this.maxforce);
         this.applyForce(steer);
     }
