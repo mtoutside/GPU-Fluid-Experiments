@@ -2,6 +2,7 @@ let sketch = function(s) {
     window.s = s;
     let flock;
     let player;
+    let enemy;
     let count = 0;
 
     window.fluidFieldScale = {w: gpu_fluid_main.fluid.velocityRenderTarget.width / window.innerWidth,
@@ -19,8 +20,6 @@ let sketch = function(s) {
         s.createCanvas(s.windowWidth, s.windowHeight);
 
         let cv = document.getElementById("defaultCanvas0");
-        // cv.style.width="auto";
-        // cv.style.height ="auto";
         cv.style.display ="block";
 
         swapFragShader(gpu_fluid_main.fluid.applyForcesShader, "/shaders/glsl/mouseforce.frag.glsl");
@@ -34,12 +33,13 @@ let sketch = function(s) {
         }
 
         player = new Player();
+        enemy = new Enemy();
     };
 
     let counter = window.setInterval(function() {
         let areaX = s.random(0, s.width);
         let areaY = s.random(0, s.height);
-        for (let i = 0; i < 30; i++) {
+        for (let i = 0; i < 10; i++) {
             let b = new Boid(s.random(areaX - 60, areaX + 60), s.random(areaY - 30, areaY + 30));
             flock.addBoid(b);
         }
@@ -53,6 +53,10 @@ let sketch = function(s) {
         s.clear();
         flock.run();
 
+        enemy.render();
+        enemy.arrive(player.position.x, player.position.y);
+        enemy.update();
+        enemy.edges();
 
         player.render();
         player.move();
@@ -193,6 +197,130 @@ let sketch = function(s) {
             this.heading += this.rotation;
         }
     }
+
+	Enemy = function() {
+		this.position = s.createVector(s.width / 8, s.height / 8);
+		this.r = 15;
+		this.heading = 0;
+		this.rotation = 0;
+		this.velocity = s.createVector(0, 0);
+		this.isBoosting = false;
+        this.theta = this.velocity.heading() + s.radians(90);
+        this.color = { filet: s.color(133, 260, 14), body: s.color(144, 169, 122) };
+        this.acceleration = s.createVector(0, 0);
+        this.maxspeed = 3;    // Maximum speed
+        this.maxforce = 0.2; // Maximum steering force
+
+        this.applyForce = function(force) {
+            this.acceleration.add(force);
+        };
+
+        // Method to update location
+        this.update = function() {
+            // Update velocity
+            this.velocity.add(this.acceleration);
+            // Limit speed
+            this.velocity.limit(this.maxspeed);
+            this.position.add(this.velocity);
+            // Reset accelertion to 0 each cycle
+            this.acceleration.mult(0);
+        };
+
+        // A method that calculates and applies a steering force towards a target
+        // STEER = DESIRED MINUS VELOCITY
+        this.seek = function(target) {
+            let desired = p5.Vector.sub(target,this.position);  // A vector pointing from the location to the target
+            // Normalize desired and scale to maximum speed
+            desired.normalize();
+            desired.mult(this.maxspeed);
+            // Steering = Desired minus Velocity
+            let steer = p5.Vector.sub(desired,this.velocity);
+            steer.limit(this.maxforce);  // Limit to maximum steering force
+            return steer;
+        };
+
+        // Arrive
+        // Chasing Mouse
+        this.arrive = function(x, y) {
+            let target = s.createVector(x, y);
+            let neighbordist = 350;
+
+            let d = p5.Vector.dist(this.position,target);
+            let steer = s.createVector(0, 0);
+
+            if ((d > 0) && (d < neighbordist)) {
+                steer = this.seek(target);  // Chaseing mouse
+            }
+            steer.mult(3);
+            steer.limit(this.maxforce);
+            this.applyForce(steer);
+        }
+
+        this.hits = function(player) {
+            let d = s.dist(this.position.x, this.position.y, player.position.x, player.position.y);
+            if(d < this.r + boids.r) {
+                return true;
+            } else {
+                return false;
+            }
+        }
+
+        this.render = function() {
+            s.push();
+            s.noStroke();
+            s.translate(this.position.x, this.position.y);
+            s.rotate(this.theta);
+            s.translate(0, -12); //回転軸を体の真ん中に
+
+            // 左右のヒレ
+            for(let i = -1; i <= 1; i +=2) {
+                s.push();
+                s.fill(this.color.filet);
+                s.translate(0, 10);
+                s.rotate((s.PI / 12) * s.sin(this.theta * 2) * i);
+
+                s.beginShape();
+                s.vertex(0, 0);
+                s.vertex(12 * i, 4);
+                s.vertex(10 * i, 10);
+                s.vertex(0, 4);
+                s.endShape();
+                s.pop();
+            }
+
+            // しっぽ
+            s.push();
+            s.fill(this.color.filet);
+            s.translate(0, 25);
+            s.rotate((s.PI / 12) * s.sin(this.theta * 2));
+            s.beginShape();
+            s.vertex(0, 0);
+            s.bezierVertex(0, 0, 5, 5, 3, 15);
+            s.bezierVertex(3, 15, 0, 8, 0, 8);
+            s.bezierVertex(0, 8, 0, 8, -3, 15);
+            s.bezierVertex(-3, 15, -5, 5, 0, 0);
+            s.endShape();
+            s.pop();
+
+            //胴体
+            s.beginShape();
+            s.fill(this.color.body);
+            s.vertex(0, 30);
+            s.bezierVertex(0, 30, -10, 10, 0, 0);
+            s.bezierVertex(0, 0, 10, 10, 0, 30);
+            s.endShape();
+            s.pop();
+
+        }
+
+        this.edges = function() {
+            if (this.position.x < -this.r)  this.position.x = s.width + this.r;
+            if (this.position.y < -this.r)  this.position.y = s.height + this.r;
+            if (this.position.x > s.width + this.r) this.position.x = -this.r;
+            if (this.position.y > s.height + this.r) this.position.y = -this.r;
+        }
+    }
+
     // The Nature of Code
     // Daniel Shiffman
     // http://natureofcode.com
@@ -252,32 +380,32 @@ let sketch = function(s) {
     };
 
     Boid.prototype.run = function(boids) {
-	this.flock(boids);
-    this.arrive(player.position.x, player.position.y);
-	this.follow();
-	this.update();
-	this.borders();
-	this.render();
+        this.flock(boids);
+        this.arrive(player.position.x, player.position.y);
+        this.follow();
+        this.update();
+        this.borders();
+        this.render();
     };
 
     Boid.prototype.applyForce = function(force) {
-	// We could add mass here if we want A = F / M
-	this.acceleration.add(force);
+        // We could add mass here if we want A = F / M
+        this.acceleration.add(force);
     };
 
     // We accumulate a new acceleration each time based on three rules
     Boid.prototype.flock = function(boids) {
-	let sep = this.separate(boids);   // Separation
-	let ali = this.align(boids);      // Alignment
-	let coh = this.cohesion(boids);   // Cohesion
-	// Arbitrarily weight these forces
-	sep.mult(1.5);
-	ali.mult(1.0);
-	coh.mult(1.0);
-	// Add the force vectors to acceleration
-	this.applyForce(sep);
-	this.applyForce(ali);
-	this.applyForce(coh);
+        let sep = this.separate(boids);   // Separation
+        let ali = this.align(boids);      // Alignment
+        let coh = this.cohesion(boids);   // Cohesion
+        // Arbitrarily weight these forces
+        sep.mult(1.5);
+        ali.mult(1.0);
+        coh.mult(1.0);
+        // Add the force vectors to acceleration
+        this.applyForce(sep);
+        this.applyForce(ali);
+        this.applyForce(coh);
 
     };
 
