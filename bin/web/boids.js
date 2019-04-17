@@ -66,6 +66,7 @@ let sketch = function(s) {
         if(enemy[i].hits(player)) {
             console.log('ouchi');
             s.clear();
+            break;
         }
         enemy[i].arrive(player.position.x, player.position.y);
         enemy[i].update();
@@ -592,5 +593,5 @@ let sketch = function(s) {
 
 
 setTimeout(function() {
-    const boidsSketch = new p5(sketch);
+    // const boidsSketch = new p5(sketch);
 }, 2000);
