@@ -4,6 +4,9 @@ let sketch = function(s) {
     let player;
     let enemy = [];
     let count = 0;
+    let gameOver = false;
+    const wrapper = document.querySelector('.menu__wrapper');
+    const title = document.querySelector('.titlearea');
 
     window.fluidFieldScale = {w: gpu_fluid_main.fluid.velocityRenderTarget.width / window.innerWidth,
                               h: gpu_fluid_main.fluid.velocityRenderTarget.height / window.innerHeight }; // flow field is of size 324 * 233
@@ -15,6 +18,7 @@ let sketch = function(s) {
 	console.log(shader._fragSource);
 	shader.create();
     };
+
 
     s.setup = function() {
         s.createCanvas(s.windowWidth, s.windowHeight);
@@ -36,41 +40,56 @@ let sketch = function(s) {
         enemy.push(new Enemy());
     };
 
-     window.setInterval(function() {
-        if(enemy.length < 20) {
-            enemy.push(new Enemy());
-        }
-     }, 60 * 1000);
-
-     window.setInterval(function() {
-         if(flock.boids.length < 200) {
-             let areaX = s.random(0, s.width);
-             let areaY = s.random(0, s.height);
-             for (let i = 0; i < 10; i++) {
-                 let b = new Boid(s.random(areaX - 60, areaX + 60), s.random(areaY - 30, areaY + 30));
-                 flock.addBoid(b);
-             }
-         }
-    }, 30 * 1000);
 
     s.windowResized = function() {
         s.resizeCanvas(s.windowWidth, s.windowHeight);
     }
 
+    setInterval(function() {
+        if(enemy.length < 20) {
+            enemy.push(new Enemy());
+        }
+    }, 6 * 1000);
+
+    setInterval(function() {
+        if(flock.boids.length < 200) {
+            let areaX = s.random(0, s.width);
+            let areaY = s.random(0, s.height);
+            for (let i = 0; i < 10; i++) {
+                let b = new Boid(s.random(areaX - 60, areaX + 60), s.random(areaY - 30, areaY + 30));
+                flock.addBoid(b);
+            }
+        }
+    }, 3 * 1000);
+
     s.draw = function() {
+        if(gameOver) {
+            s.noLoop();
+        }
         s.clear();
         flock.run();
 
         for(let i in enemy) {
-        enemy[i].render();
-        if(enemy[i].hits(player)) {
-            console.log('ouchi');
-            s.clear();
-            break;
-        }
-        enemy[i].arrive(player.position.x, player.position.y);
-        enemy[i].update();
-        enemy[i].edges();
+            enemy[i].render();
+            if(enemy[i].hits(player)) {
+                enemy = [];
+                flock.boids = [];
+                gameOver = true;
+                endText = s.createP('GAME OVER');
+                scoreText = s.createP(`Your Score: ${count}`);
+                endText.class('title');
+                scoreText.class('score');
+                endText.parent(title);
+                scoreText.parent(title);
+                menu.style.display = 'block';
+                again.style.display = 'block';
+                start.style.display = 'none';
+                break;
+
+            }
+            enemy[i].arrive(player.position.x, player.position.y);
+            enemy[i].update();
+            enemy[i].edges();
         }
 
         player.render();
@@ -82,17 +101,18 @@ let sketch = function(s) {
         s.textSize(32);
         s.fill(255);
         s.text(count, 100, 50);
+
     };
 
     // Add a new boid into the System
     s.mouseDragged = function() {
-	flock.addBoid(new Boid(s.mouseX, s.mouseY));
+        flock.addBoid(new Boid(s.mouseX, s.mouseY));
     };
 
-	s.keyReleased = function() {
-		player.setRotation(0);
-		player.boosting(false);
-	}
+    s.keyReleased = function() {
+        player.setRotation(0);
+        player.boosting(false);
+    }
 
     /**
      * player
