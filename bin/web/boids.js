@@ -37,18 +37,21 @@ let sketch = function(s) {
     };
 
      window.setInterval(function() {
-        let e = new Enemy();
-        enemy.push(e);
-     }, 60000);
+        if(enemy.length < 20) {
+            enemy.push(new Enemy());
+        }
+     }, 60 * 1000);
 
      window.setInterval(function() {
-        let areaX = s.random(0, s.width);
-        let areaY = s.random(0, s.height);
-        for (let i = 0; i < 10; i++) {
-            let b = new Boid(s.random(areaX - 60, areaX + 60), s.random(areaY - 30, areaY + 30));
-            flock.addBoid(b);
-        }
-    }, 30000);
+         if(flock.boids.length < 200) {
+             let areaX = s.random(0, s.width);
+             let areaY = s.random(0, s.height);
+             for (let i = 0; i < 10; i++) {
+                 let b = new Boid(s.random(areaX - 60, areaX + 60), s.random(areaY - 30, areaY + 30));
+                 flock.addBoid(b);
+             }
+         }
+    }, 30 * 1000);
 
     s.windowResized = function() {
         s.resizeCanvas(s.windowWidth, s.windowHeight);
