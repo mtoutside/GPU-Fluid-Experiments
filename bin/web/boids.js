@@ -2,7 +2,7 @@ let sketch = function(s) {
     window.s = s;
     let flock;
     let player;
-    let enemy;
+    let enemy = [];
     let count = 0;
 
     window.fluidFieldScale = {w: gpu_fluid_main.fluid.velocityRenderTarget.width / window.innerWidth,
@@ -33,10 +33,15 @@ let sketch = function(s) {
         }
 
         player = new Player();
-        enemy = new Enemy();
+        enemy.push(new Enemy());
     };
 
-    let counter = window.setInterval(function() {
+     window.setInterval(function() {
+        let e = new Enemy();
+        enemy.push(e);
+     }, 60000);
+
+     window.setInterval(function() {
         let areaX = s.random(0, s.width);
         let areaY = s.random(0, s.height);
         for (let i = 0; i < 10; i++) {
@@ -53,10 +58,16 @@ let sketch = function(s) {
         s.clear();
         flock.run();
 
-        enemy.render();
-        enemy.arrive(player.position.x, player.position.y);
-        enemy.update();
-        enemy.edges();
+        for(let i in enemy) {
+        enemy[i].render();
+        if(enemy[i].hits(player)) {
+            console.log('ouchi');
+            s.clear();
+        }
+        enemy[i].arrive(player.position.x, player.position.y);
+        enemy[i].update();
+        enemy[i].edges();
+        }
 
         player.render();
         player.move();
@@ -198,18 +209,20 @@ let sketch = function(s) {
         }
     }
 
+    /**
+     * Enemy
+     *
+     * @returns {undefined}
+     */
 	Enemy = function() {
-		this.position = s.createVector(s.width / 8, s.height / 8);
+		this.position = s.createVector(s.random(s.width), s.random(s.height));
 		this.r = 15;
-		this.heading = 0;
-		this.rotation = 0;
 		this.velocity = s.createVector(0, 0);
-		this.isBoosting = false;
-        this.theta = this.velocity.heading() + s.radians(90);
+        this.theta = s.radians(90);
         this.color = { filet: s.color(133, 260, 14), body: s.color(144, 169, 122) };
         this.acceleration = s.createVector(0, 0);
-        this.maxspeed = 3;    // Maximum speed
-        this.maxforce = 0.2; // Maximum steering force
+        this.maxspeed = 4;    // Maximum speed
+        this.maxforce = 0.3; // Maximum steering force
 
         this.applyForce = function(force) {
             this.acceleration.add(force);
@@ -230,6 +243,7 @@ let sketch = function(s) {
         // STEER = DESIRED MINUS VELOCITY
         this.seek = function(target) {
             let desired = p5.Vector.sub(target,this.position);  // A vector pointing from the location to the target
+            this.theta = s.atan2(desired.y, desired.x) + s.radians(90);
             // Normalize desired and scale to maximum speed
             desired.normalize();
             desired.mult(this.maxspeed);
@@ -240,10 +254,9 @@ let sketch = function(s) {
         };
 
         // Arrive
-        // Chasing Mouse
         this.arrive = function(x, y) {
             let target = s.createVector(x, y);
-            let neighbordist = 350;
+            let neighbordist = s.max(s.width, s.height);
 
             let d = p5.Vector.dist(this.position,target);
             let steer = s.createVector(0, 0);
@@ -258,7 +271,7 @@ let sketch = function(s) {
 
         this.hits = function(player) {
             let d = s.dist(this.position.x, this.position.y, player.position.x, player.position.y);
-            if(d < this.r + boids.r) {
+            if(d < this.r + player.r) {
                 return true;
             } else {
                 return false;
@@ -375,13 +388,16 @@ let sketch = function(s) {
         this.velocity = s.createVector(s.random(-1, 1), s.random(-1, 1));
         this.position = s.createVector(x, y);
         this.r = s.random(3.0, 6.0);
-        this.maxspeed = 3;    // Maximum speed
+        this.maxspeed = 4;    // Maximum speed
         this.maxforce = 0.2; // Maximum steering force
     };
 
     Boid.prototype.run = function(boids) {
         this.flock(boids);
-        this.arrive(player.position.x, player.position.y);
+        this.avoid(player.position.x, player.position.y);
+        for(let i = enemy.length -1; i >= 0; i--) {
+            this.avoid(enemy[i].position.x, enemy[i].position.y);
+        }
         this.follow();
         this.update();
         this.borders();
@@ -552,17 +568,18 @@ let sketch = function(s) {
 	}
     };
 
-    // Arrive
-    // Chasing Mouse
-    Boid.prototype.arrive = function(x, y) {
+    // Avoid
+    // Avoiding from target
+    Boid.prototype.avoid = function(x, y) {
         let target = s.createVector(x, y);
-        let neighbordist = 150;
+        let neighbordist = 250;
 
         let d = p5.Vector.dist(this.position,target);
         let steer = s.createVector(0, 0);
 
         if ((d > 0) && (d < neighbordist)) {
             steer = this.seek(target);  // Chaseing mouse
+            steer.mult(-1);
         }
         steer.mult(3);
         steer.limit(this.maxforce);
