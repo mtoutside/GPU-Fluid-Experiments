@@ -7,26 +7,25 @@ let sketch = function(s) {
     let gameOver = false;
     const wrapper = document.querySelector('.menu__wrapper');
     const title = document.querySelector('.titlearea');
+    const gl = snow_modules_opengl_web_GL.gl;
 
-    window.fluidFieldScale = {w: gpu_fluid_main.fluid.velocityRenderTarget.width / window.innerWidth,
-                              h: gpu_fluid_main.fluid.velocityRenderTarget.height / window.innerHeight }; // flow field is of size 324 * 233
-    let gl = snow_modules_opengl_web_GL.gl;
 
-    let swapFragShader = async function swapFragShader (shader, shaderLoc) {
-	let resp = await fetch(shaderLoc);
-	shader._fragSource = await resp.text();
-	console.log(shader._fragSource);
-	shader.create();
-    };
+    s.preload = function() {
+        window.fluidFieldScale = {w: gpu_fluid_main.fluid.velocityRenderTarget.width / window.innerWidth,
+            h: gpu_fluid_main.fluid.velocityRenderTarget.height / window.innerHeight }; // flow field is of size 324 * 233
 
+        let swapFragShader = async function swapFragShader (shader, shaderLoc) {
+            let resp = await fetch(shaderLoc);
+            shader._fragSource = await resp.text();
+            console.log(shader._fragSource);
+            shader.create();
+        };
+
+        swapFragShader(gpu_fluid_main.fluid.applyForcesShader, "/shaders/glsl/mouseforce.frag.glsl");
+    }
 
     s.setup = function() {
         s.createCanvas(s.windowWidth, s.windowHeight);
-
-        let cv = document.getElementById("defaultCanvas0");
-        cv.style.display ="block";
-
-        swapFragShader(gpu_fluid_main.fluid.applyForcesShader, "/shaders/glsl/mouseforce.frag.glsl");
 
         flock = new Flock();
         window.flock = flock;
@@ -49,18 +48,18 @@ let sketch = function(s) {
         if(enemy.length < 20) {
             enemy.push(new Enemy());
         }
-    }, 6 * 1000);
+    }, 10 * 1000);
 
     setInterval(function() {
-        if(flock.boids.length < 200) {
+        if(flock.boids.length < 150) {
             let areaX = s.random(0, s.width);
             let areaY = s.random(0, s.height);
-            for (let i = 0; i < 10; i++) {
+            for (let i = 0; i < 20; i++) {
                 let b = new Boid(s.random(areaX - 60, areaX + 60), s.random(areaY - 30, areaY + 30));
                 flock.addBoid(b);
             }
         }
-    }, 3 * 1000);
+    }, 10 * 1000);
 
     s.draw = function() {
         if(gameOver) {
@@ -88,6 +87,7 @@ let sketch = function(s) {
 
             }
             enemy[i].arrive(player.position.x, player.position.y);
+            enemy[i].separate(enemy);
             enemy[i].update();
             enemy[i].edges();
         }
@@ -120,7 +120,7 @@ let sketch = function(s) {
      * @returns {undefined}
      */
 	Player = function() {
-		this.position = s.createVector(s.width / 4, s.height / 4);
+		this.position = s.createVector(s.random(s.width), s.height / s.random(1, 5));
 		this.r = 15;
 		this.heading = 0;
 		this.rotation = 0;
@@ -242,7 +242,8 @@ let sketch = function(s) {
 		this.position = s.createVector(s.random(s.width), s.random(s.height));
 		this.r = 8;
 		this.velocity = s.createVector(0, 0);
-        this.theta = s.radians(90);
+        this.theta = 0;
+        this.heading = s.radians(90);
         this.color = { filet: s.color(133, 260, 14), body: s.color(144, 169, 122) };
         this.acceleration = s.createVector(0, 0);
         this.maxspeed = 4;    // Maximum speed
@@ -261,13 +262,15 @@ let sketch = function(s) {
             this.position.add(this.velocity);
             // Reset accelertion to 0 each cycle
             this.acceleration.mult(0);
+
+            this.theta += s.PI / 100;
         };
 
         // A method that calculates and applies a steering force towards a target
         // STEER = DESIRED MINUS VELOCITY
         this.seek = function(target) {
             let desired = p5.Vector.sub(target,this.position);  // A vector pointing from the location to the target
-            this.theta = s.atan2(desired.y, desired.x) + s.radians(90);
+            this.heading = s.atan2(desired.y, desired.x) + s.radians(90);
             // Normalize desired and scale to maximum speed
             desired.normalize();
             desired.mult(this.maxspeed);
@@ -302,11 +305,44 @@ let sketch = function(s) {
             }
         }
 
+        // Separation
+        this.separate = function(enemy) {
+            let desiredseparation = 25.0;
+            let steer = s.createVector(0, 0);
+            let count = 0;
+            for (let i = 0; i < enemy.length; i++) {
+                let d = p5.Vector.dist(this.position,enemy[i].position);
+                if ((d > 0) && (d < desiredseparation)) {
+                    let diff = p5.Vector.sub(this.position, enemy[i].position);
+                    diff.normalize();
+                    diff.div(d);        // Weight by distance
+                    steer.add(diff);
+                    count++;            // Keep track of how many
+                }
+            }
+            // Average -- divide by how many
+            if (count > 0) {
+                steer.div(count);
+            }
+
+            // As long as the vector is greater than 0
+            if (steer.mag() > 0) {
+                // Implement Reynolds: Steering = Desired - Velocity
+                steer.normalize();
+                steer.mult(this.maxspeed);
+                steer.sub(this.velocity);
+                steer.limit(this.maxforce);
+            }
+            steer.mult(1.5);
+            steer.limit(this.maxforce);
+            this.applyForce(steer);
+        };
+
         this.render = function() {
             s.push();
             s.noStroke();
             s.translate(this.position.x, this.position.y);
-            s.rotate(this.theta);
+            s.rotate(this.heading);
             s.translate(0, -12); //回転軸を体の真ん中に
 
             // 左右のヒレ
