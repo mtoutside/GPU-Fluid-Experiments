@@ -7,6 +7,7 @@
         <meta charset="utf-8">
         <script language="javascript" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/0.7.3/p5.min.js"></script>
         <script language="javascript" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/0.7.3/addons/p5.dom.min.js"></script>
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/meyer-reset/2.0/reset.min.css" />
 
         <style>
             #app {
@@ -49,8 +50,12 @@
                 align-items: center;
             }
 
-            .start,
-            .again {
+            .button__wrapper {
+                display: flex;
+                justify-content: center;
+            }
+
+            .button {
                 width: 200px;
                 height: 100px;
                 background: #33a;
@@ -61,17 +66,23 @@
                 margin: 10px;
             }
 
-            .again {
-                display: none;
-            }
             .title,
             .score {
                 font-size: 32px;
                 color: #d06;
+                margin: 10px 0 0 0;
             }
 
             .titlearea {
                 text-align: center;
+                height: 150px;
+            }
+
+            .none {
+                display: none;
+            }
+            .display {
+                display: block;
             }
         </style>
 
@@ -82,18 +93,21 @@
     <body style="padding: 0; margin: 0; background-color: #111111;">
         <div class="menu">
             <div class="menu__wrapper">
-                <div class="titlearea"></div>
+                <div class="titlearea">
+                    <h1 class="title">fish game</h1>
+                </div>
                 <div class="button__wrapper">
-                    <button class="start">START</button>
-                    <button class="again">PLAY AGAIN</button>
+                    <button class="button button--start">START</button>
+                    <button class="button button--again none">PLAY AGAIN</button>
+                    <button class="button button--info">INFO</button>
                 </div>
             </div>
         </div>
         <script type="text/javascript" src="./GPUFluid.js"></script>
         <script defer type="text/javascript" src="./boids.js"></script>
         <script defer>
-            const again = document.querySelector('.again');
-            const start = document.querySelector('.start');
+            const again = document.querySelector('.button--again');
+            const start = document.querySelector('.button--start');
             const menu = document.querySelector('.menu');
             again.addEventListener('click', () => {
                 history.go(0);
@@ -101,7 +115,7 @@
 
             start.addEventListener('click', () => {
                 const boidsSketch = new p5(sketch);
-                menu.style.display = 'none';
+                menu.classList.add('none');
             });
         </script>
 

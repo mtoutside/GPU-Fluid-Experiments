@@ -76,14 +76,14 @@ let sketch = function(s) {
                 flock.boids = [];
                 gameOver = true;
                 endText = s.createP('GAME OVER');
-                scoreText = s.createP(`Your Score: ${count}`);
+                scoreText = s.createP(`Score: ${count}`);
                 endText.class('title');
                 scoreText.class('score');
                 endText.parent(title);
                 scoreText.parent(title);
-                menu.style.display = 'block';
-                again.style.display = 'block';
-                start.style.display = 'none';
+                menu.classList.add('display');
+                again.classList.remove('none');
+                start.classList.add('none');
                 break;
 
             }
@@ -100,7 +100,7 @@ let sketch = function(s) {
 
         s.textSize(32);
         s.fill(255);
-        s.text(count, 100, 50);
+        s.text(`score: ${count}`, 10, 50);
 
     };
 
@@ -240,7 +240,7 @@ let sketch = function(s) {
      */
 	Enemy = function() {
 		this.position = s.createVector(s.random(s.width), s.random(s.height));
-		this.r = 15;
+		this.r = 8;
 		this.velocity = s.createVector(0, 0);
         this.theta = s.radians(90);
         this.color = { filet: s.color(133, 260, 14), body: s.color(144, 169, 122) };
@@ -489,15 +489,22 @@ let sketch = function(s) {
     Boid.prototype.render = function() {
 	// Draw a triangle rotated in the direction of velocity
 	let theta = this.velocity.heading() + s.radians(90);
-	s.fill(127);
-	s.stroke(200);
+    s.noStroke();
+	s.fill(150, 150, 185);
 	s.push();
 	s.translate(this.position.x, this.position.y);
 	s.rotate(theta);
 	s.beginShape();
-	s.vertex(0, -this.r * 2);
-	s.vertex(-this.r, this.r * 2);
-	s.vertex(this.r, this.r * 2);
+	// s.vertex(0, -this.r * 2);
+	// s.vertex(-this.r, this.r * 2);
+	// s.vertex(this.r, this.r * 2);
+    s.curveVertex(0, -1.5 * this.r);
+    s.curveVertex(0.5 * this.r, 0);
+    s.curveVertex(0, 2.5 * this.r);
+    s.curveVertex(-0.5 * this.r, 0);
+    s.curveVertex(0, -1.5 * this.r);
+    s.curveVertex(0.5 * this.r, 0);
+    s.curveVertex(0, 2.5 * this.r);
 	s.endShape(s.CLOSE);
 	s.pop();
     };
