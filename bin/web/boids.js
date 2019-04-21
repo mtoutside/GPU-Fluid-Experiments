@@ -55,7 +55,7 @@ let sketch = function(s) {
         if(enemy.length < 20) {
             enemy.push(new Enemy());
         }
-    }, 10 * 1000);
+    }, 20 * 1000);
 
     setInterval(function() {
         if(flock.boids.length < 150) {
@@ -66,7 +66,7 @@ let sketch = function(s) {
                 flock.addBoid(b);
             }
         }
-    }, 10 * 1000);
+    }, 20 * 1000);
 
     s.draw = function() {
         if(gameOver) {
@@ -77,22 +77,22 @@ let sketch = function(s) {
 
         for(let i in enemy) {
             enemy[i].render();
-            if(enemy[i].hits(player)) {
-                enemy = [];
-                flock.boids = [];
-                gameOver = true;
-                endText = s.createP('GAME OVER');
-                scoreText = s.createP(`Score: ${count}`);
-                endText.class('title');
-                scoreText.class('score');
-                endText.parent(title);
-                scoreText.parent(title);
-                menu.classList.add('display');
-                again.classList.remove('none');
-                start.classList.add('none');
-                break;
-
-            }
+            // if(enemy[i].hits(player)) {
+            //     enemy = [];
+            //     flock.boids = [];
+            //     gameOver = true;
+            //     endText = s.createP('GAME OVER');
+            //     scoreText = s.createP(`Score: ${count}`);
+            //     endText.class('title');
+            //     scoreText.class('score');
+            //     endText.parent(title);
+            //     scoreText.parent(title);
+            //     menu.classList.add('display');
+            //     again.classList.remove('none');
+            //     start.classList.add('none');
+            //     break;
+            //
+            // }
             enemy[i].arrive(player.position.x, player.position.y);
             enemy[i].separate(enemy);
             enemy[i].update();
@@ -124,7 +124,7 @@ let sketch = function(s) {
     /**
      * player
      *
-     * @returns {undefined}
+     * @returns {null}
      */
 	Player = function() {
 		this.position = s.createVector(s.random(s.width), s.height / s.random(1, 5));
@@ -243,7 +243,7 @@ let sketch = function(s) {
     /**
      * Enemy
      *
-     * @returns {undefined}
+     * @returns {null}
      */
 	Enemy = function() {
 		this.position = s.createVector(s.random(s.width), s.random(s.height));
@@ -660,8 +660,3 @@ let sketch = function(s) {
         this.applyForce(steer);
     }
 };
-
-
-setTimeout(function() {
-    // const boidsSketch = new p5(sketch);
-}, 2000);
