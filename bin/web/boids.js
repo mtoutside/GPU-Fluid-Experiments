@@ -45,6 +45,9 @@ let sketch = function(s) {
 
         player = new Player();
         enemy.push(new Enemy());
+
+        bgm.setVolume(0.3);
+        bgm.loop();
     };
 
 
@@ -70,8 +73,6 @@ let sketch = function(s) {
     }, 20 * 1000);
 
     s.draw = function() {
-        bgm.setVolume(0.1);
-        bgm.loop();
 
         if(gameOver) {
             s.noLoop();
