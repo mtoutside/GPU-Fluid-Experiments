@@ -29,6 +29,8 @@ let sketch = function(s) {
             shader.create();
         };
         swapVertShader(gpu_fluid_main.renderParticlesShader, "/shaders/glsl/renderparticleshader.vert");
+
+        bgm = s.loadSound('/bgm.mp3');
     }
 
     s.setup = function() {
@@ -68,8 +70,12 @@ let sketch = function(s) {
     }, 20 * 1000);
 
     s.draw = function() {
+        bgm.setVolume(0.1);
+        bgm.loop();
+
         if(gameOver) {
             s.noLoop();
+            bgm.stop();
         }
         s.clear();
         flock.run();
