@@ -20,8 +20,15 @@ let sketch = function(s) {
             console.log(shader._fragSource);
             shader.create();
         };
-
         swapFragShader(gpu_fluid_main.fluid.applyForcesShader, "/shaders/glsl/mouseforce.frag.glsl");
+
+        let swapVertShader = async function swapFragShader (shader, shaderLoc, beforeCreate) {
+            let resp = await fetch(shaderLoc);
+            shader._vertSource = await resp.text();
+            if (beforeCreate) beforeCreate(shader);
+            shader.create();
+        };
+        swapVertShader(gpu_fluid_main.renderParticlesShader, "/shaders/glsl/renderparticleshader.vert");
     }
 
     s.setup = function() {
