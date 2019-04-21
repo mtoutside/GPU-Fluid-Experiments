@@ -89,25 +89,12 @@ uniform vec2 mouse;
 uniform vec2 lastMouse;
 void main(){
   vec2 v = texture2D(velocity, texelCoord).xy; // + texture2D(salaryman, texelCoord).xy; //notsure texel? p?
+
   if (texelCoord.y > 0.2 && texelCoord.y < 0.3
       || texelCoord.y > 0.8 && texelCoord.y < 0.9){
-    v += vec2(0.02,0);
+    v += vec2(0.03, 0);
   }
   v.xy *= 0.999;
-  if(isMouseDown){
-    vec2 mouseVelocity = -(lastMouse - mouse)/dt;
 
-
-
-    float projection;
-    float l = distanceToSegment(mouse, lastMouse, p, projection);
-    float taperFactor = 0.6;
-    float projectedFraction = 1.0 - clamp(projection, 0.0, 1.0)*taperFactor;
-    float R = 0.015;
-    float m = exp(-l/R);
-    m *= projectedFraction * projectedFraction;
-    vec2 targetVelocity = mouseVelocity * dx * 1.4;
-    v += (targetVelocity - v)*m;
-  }
   gl_FragColor = vec4(v, 0, 1.);
 }
