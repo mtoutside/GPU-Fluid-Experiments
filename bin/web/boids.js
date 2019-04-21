@@ -36,7 +36,6 @@ let sketch = function(s) {
 
         flock = new Flock();
         window.flock = flock;
-        // Add an initial set of boids into the system
         for (let i = 0; i < 30; i++) {
             let b = new Boid(s.width / 2,s.height / 2);
             flock.addBoid(b);
@@ -77,22 +76,23 @@ let sketch = function(s) {
 
         for(let i in enemy) {
             enemy[i].render();
-            // if(enemy[i].hits(player)) {
-            //     enemy = [];
-            //     flock.boids = [];
-            //     gameOver = true;
-            //     endText = s.createP('GAME OVER');
-            //     scoreText = s.createP(`Score: ${count}`);
-            //     endText.class('title');
-            //     scoreText.class('score');
-            //     endText.parent(title);
-            //     scoreText.parent(title);
-            //     menu.classList.add('display');
-            //     again.classList.remove('none');
-            //     start.classList.add('none');
-            //     break;
-            //
-            // }
+            // 敵との当たり判定
+            if(enemy[i].hits(player)) {
+                enemy = [];
+                flock.boids = [];
+                gameOver = true;
+                endText = s.createP('GAME OVER');
+                scoreText = s.createP(`Score: ${count}`);
+                endText.class('title');
+                scoreText.class('score');
+                endText.parent(title);
+                scoreText.parent(title);
+                menu.classList.add('display');
+                again.classList.remove('none');
+                start.classList.add('none');
+                break;
+
+            }
             enemy[i].arrive(player.position.x, player.position.y);
             enemy[i].separate(enemy);
             enemy[i].update();
@@ -111,10 +111,6 @@ let sketch = function(s) {
 
     };
 
-    // Add a new boid into the System
-    s.mouseDragged = function() {
-        flock.addBoid(new Boid(s.mouseX, s.mouseY));
-    };
 
     s.keyReleased = function() {
         player.setRotation(0);
@@ -533,7 +529,7 @@ let sketch = function(s) {
 	// Draw a triangle rotated in the direction of velocity
 	let theta = this.velocity.heading() + s.radians(90);
     s.noStroke();
-	s.fill(150, 150, 185);
+	s.fill(170, 120, 155);
 	s.push();
 	s.translate(this.position.x, this.position.y);
 	s.rotate(theta);
