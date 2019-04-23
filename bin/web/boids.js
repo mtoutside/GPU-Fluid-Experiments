@@ -94,7 +94,7 @@ let sketch = function(s) {
                 scoreText.class('score');
                 endText.parent(title);
                 scoreText.parent(title);
-                menu.classList.add('display');
+                menu.classList.toggle('none');
                 again.classList.remove('none');
                 start.classList.add('none');
                 break;

@@ -110,14 +110,36 @@
             const again = document.querySelector('.button--again');
             const start = document.querySelector('.button--start');
             const menu = document.querySelector('.menu');
+            let isRunning = false;
+            let game;
+
             again.addEventListener('click', () => {
-                history.go(0);
+                // history.go(0);
+                location.reload();
+                // menu.classList.toggle('none');
             });
 
             start.addEventListener('click', () => {
                 const boidsSketch = new p5(sketch);
                 menu.classList.add('none');
             });
+
+        window.addEventListener('keydown', (eve) => {
+            if(!isRunning) {
+                if(eve.key === 'Enter') {
+                    game = new p5(sketch);
+                    menu.classList.toggle('none');
+                    isRunning = true;
+                }
+            }
+        }, false);
+
+        setTimeout(() => {
+            game = new p5(sketch);
+                    menu.classList.toggle('none');
+                    isRunning = true;
+        }, 5 * 1000);
+
         </script>
 
     </body>
