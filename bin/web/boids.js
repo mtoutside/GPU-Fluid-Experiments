@@ -38,7 +38,7 @@ let sketch = function(s) {
 
         flock = new Flock();
         window.flock = flock;
-        for (let i = 0; i < 30; i++) {
+        for (let i = 0; i < 40; i++) {
             let b = new Boid(s.width / 2,s.height / 2);
             flock.addBoid(b);
         }
@@ -542,16 +542,14 @@ let sketch = function(s) {
 	s.translate(this.position.x, this.position.y);
 	s.rotate(theta);
 	s.beginShape();
-	// s.vertex(0, -this.r * 2);
-	// s.vertex(-this.r, this.r * 2);
 	// s.vertex(this.r, this.r * 2);
-    s.curveVertex(0, -1.5 * this.r);
-    s.curveVertex(0.5 * this.r, 0);
-    s.curveVertex(0, 2.5 * this.r);
-    s.curveVertex(-0.5 * this.r, 0);
-    s.curveVertex(0, -1.5 * this.r);
-    s.curveVertex(0.5 * this.r, 0);
-    s.curveVertex(0, 2.5 * this.r);
+    s.curveVertex(0, -1.5 * this.r * 1.0);
+    s.curveVertex(0.5 * this.r * 1.5, 0);
+    s.curveVertex(0, 2.5 * this.r * 1.5);
+    s.curveVertex(-0.5 * this.r * 1.5, 0);
+    s.curveVertex(0, -1.5 * this.r * 1.0);
+    s.curveVertex(0.5 * this.r * 1.5, 0);
+    s.curveVertex(0, 2.5 * this.r * 1.5);
 	s.endShape(s.CLOSE);
 	s.pop();
     };
