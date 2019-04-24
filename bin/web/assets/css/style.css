@@ -1,5 +1,10 @@
 @charset "utf-8";
 
+@font-face {
+	font-family: 'press';
+	src: url(/assets/fonts/PressStart2P.ttf);
+}
+
 body {
     color: #fff;
     font-size: 14px;
@@ -39,18 +44,22 @@ body {
 }
 .title,
 .score {
+    font-family: 'press', cursive;
     font-size: 32px;
     color: #f23a0c;
     margin: 10px 0 0 0;
 }
 
 .howto {
+    font-family: "Nico Moji";
+    letter-spacing: 0.15em;
     color: #F47556;
-    font-size: 20px;
+    font-size: 26px;
     margin-top: 20px;
 }
 
 .mess {
+    font-family: 'press', cursive;
     color: #85ff0a;
     margin-top: 20px;
 }

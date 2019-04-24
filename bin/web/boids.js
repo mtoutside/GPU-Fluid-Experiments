@@ -31,6 +31,7 @@ let sketch = function(s) {
         swapVertShader(gpu_fluid_main.renderParticlesShader, "/shaders/glsl/renderparticleshader.vert");
 
         bgm = s.loadSound('/assets/sounds/bgm.mp3');
+        myFont = s.loadFont('/assets/fonts/PressStart2P.ttf');
     }
 
     s.setup = function() {
@@ -97,7 +98,6 @@ let sketch = function(s) {
                 scoreText.parent(title);
                 menu.classList.toggle('none');
                 howto.classList.toggle('none');
-                // start.classList.add('none');
                 break;
 
             }
@@ -114,8 +114,9 @@ let sketch = function(s) {
         player.edges();
 
         s.textSize(32);
+        s.textFont(myFont);
         s.fill(242, 58, 12);
-        s.text(`Score: ${count}`, 10, 50);
+        s.text(`Score:${count}`, 10, 50);
 
     };
 
@@ -257,7 +258,7 @@ let sketch = function(s) {
         this.heading = s.radians(90);
         this.color = { filet: s.color(133, 255, 14), body: s.color(144, 169, 122) };
         this.acceleration = s.createVector(0, 0);
-        this.maxspeed = 4;    // Maximum speed
+        this.maxspeed = s.random(3, 5);    // Maximum speed
         this.maxforce = 0.3; // Maximum steering force
 
         this.applyForce = function(force) {
