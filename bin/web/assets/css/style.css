@@ -1,0 +1,87 @@
+@charset "utf-8";
+
+body {
+    color: #fff;
+    font-size: 14px;
+    line-height: 1.5;
+}
+#app {
+    display: block;
+    position: relative;
+    margin: 2em auto 0 auto;
+    z-index: 1;
+}
+
+.p5Canvas {
+    position: absolute;
+    z-index: 2;
+    top: 0;
+}
+
+#restart {
+    color: green;
+    font-size: 20px;
+    position: absolute;
+    z-index: 5;
+    cursor: pointer;
+}
+
+.menu {
+    width: 100%;
+    height: 100%;
+    position: absolute;
+    z-index: 6;
+    background: #000;
+    opacity: .8;
+}
+
+.menu__wrapper {
+    width: 100%;
+    height: 100%;
+    position: absolute;
+    display: flex;
+    flex-flow: column;
+    justify-content: center;
+    align-items: center;
+}
+
+.button__wrapper {
+    display: flex;
+    justify-content: center;
+}
+
+.button {
+    width: 200px;
+    height: 100px;
+    background: #33a;
+    color: #fff;
+    font-size: 16px;
+    border: none;
+    cursor: pointer;
+    margin: 10px;
+}
+
+.title,
+.score {
+    font-size: 32px;
+    color: #d06;
+    margin: 10px 0 0 0;
+}
+
+.howto {
+    color: #fff;
+    font-size: 20px;
+    margin-top: 20px;
+}
+
+.titlearea {
+    text-align: center;
+    height: 150px;
+}
+
+.none {
+    display: none;
+}
+.display {
+    display: block;
+}

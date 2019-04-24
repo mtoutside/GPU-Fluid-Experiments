@@ -30,7 +30,7 @@ let sketch = function(s) {
         };
         swapVertShader(gpu_fluid_main.renderParticlesShader, "/shaders/glsl/renderparticleshader.vert");
 
-        bgm = s.loadSound('/bgm.mp3');
+        bgm = s.loadSound('/assets/sounds/bgm.mp3');
     }
 
     s.setup = function() {
