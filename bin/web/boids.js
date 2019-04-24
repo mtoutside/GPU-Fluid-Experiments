@@ -31,6 +31,7 @@ let sketch = function(s) {
         swapVertShader(gpu_fluid_main.renderParticlesShader, "/shaders/glsl/renderparticleshader.vert");
 
         bgm = s.loadSound('/assets/sounds/bgm.mp3');
+        eat = s.loadSound('/assets/sounds/eat.mp3');
         myFont = s.loadFont('/assets/fonts/PressStart2P.ttf');
     }
 
@@ -421,8 +422,10 @@ let sketch = function(s) {
     Flock.prototype.run = function() {
         for (let i = this.boids.length - 1; i >= 0;  i--) {
             this.boids[i].run(this.boids);  // Passing the entire list of boids to each boid individually
+
+            //小魚に衝突した時
             if(player.hits(this.boids[i])) {
-                console.log('oops');
+                eat.play();
                 this.boids.splice(i, 1);
                 count++;
             }
