@@ -11,6 +11,11 @@
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/meyer-reset/2.0/reset.min.css" />
 
         <style>
+            body {
+                color: #fff;
+                font-size: 14px;
+                line-height: 1.5;
+            }
             #app {
                 display: block;
                 position: relative;
@@ -74,6 +79,12 @@
                 margin: 10px 0 0 0;
             }
 
+            .howto {
+                color: #fff;
+                font-size: 20px;
+                margin-top: 20px;
+            }
+
             .titlearea {
                 text-align: center;
                 height: 150px;
@@ -96,49 +107,49 @@
             <div class="menu__wrapper">
                 <div class="titlearea">
                     <h1 class="title">Red Snapper game</h1>
+                    <p class="howto">鯛を操作して小魚を捕まえよう！！</p>
                 </div>
                 <div class="button__wrapper">
-                    <button class="button button--start">START</button>
-                    <button class="button button--again none">MENU</button>
-                    <button class="button button--info">HOW TO PLAY</button>
+                    <p>PRESS THE BUTTON TO START</p>
+                    <!-- <button class="button button&#45;&#45;start">START</button> -->
+                    <!-- <button class="button button&#45;&#45;again none">MENU</button> -->
                 </div>
             </div>
         </div>
         <script type="text/javascript" src="./GPUFluid.js"></script>
         <script defer type="text/javascript" src="./boids.js"></script>
         <script defer>
-            const again = document.querySelector('.button--again');
-            const start = document.querySelector('.button--start');
+            // const again = document.querySelector('.button--again');
+            // const start = document.querySelector('.button--start');
             const menu = document.querySelector('.menu');
             let isRunning = false;
+            let gameOver = false;
             let game;
 
-            again.addEventListener('click', () => {
+            // again.addEventListener('click', () => {
                 // history.go(0);
-                location.reload();
+                // location.reload();
                 // menu.classList.toggle('none');
-            });
+            // });
 
-            start.addEventListener('click', () => {
-                const boidsSketch = new p5(sketch);
-                menu.classList.add('none');
-            });
+            // start.addEventListener('click', () => {
+            //     const boidsSketch = new p5(sketch);
+            //     menu.classList.add('none');
+            // });
 
         window.addEventListener('keydown', (eve) => {
             if(!isRunning) {
                 if(eve.key === 'Enter') {
-                    game = new p5(sketch);
-                    menu.classList.toggle('none');
-                    isRunning = true;
+                    if(!gameOver) {
+                        game = new p5(sketch);
+                        menu.classList.toggle('none');
+                        isRunning = true;
+                    } else {
+                        location.reload();
+                    }
                 }
             }
         }, false);
-
-        setTimeout(() => {
-            // game = new p5(sketch);
-            //         menu.classList.toggle('none');
-            //         isRunning = true;
-        }, 5 * 1000);
 
         </script>
 

@@ -4,7 +4,7 @@ let sketch = function(s) {
     let player;
     let enemy = [];
     let count = 0;
-    let gameOver = false;
+    // let gameOver = false;
     const wrapper = document.querySelector('.menu__wrapper');
     const title = document.querySelector('.titlearea');
     const gl = snow_modules_opengl_web_GL.gl;
@@ -88,6 +88,7 @@ let sketch = function(s) {
                 enemy = [];
                 flock.boids = [];
                 gameOver = true;
+                isRunning = false;
                 endText = s.createP('GAME OVER');
                 scoreText = s.createP(`Score: ${count}`);
                 endText.class('title');
@@ -95,8 +96,8 @@ let sketch = function(s) {
                 endText.parent(title);
                 scoreText.parent(title);
                 menu.classList.toggle('none');
-                again.classList.remove('none');
-                start.classList.add('none');
+                // again.classList.remove('none');
+                // start.classList.add('none');
                 break;
 
             }
