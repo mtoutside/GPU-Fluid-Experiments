@@ -16,14 +16,7 @@ body {
     position: absolute;
     z-index: 2;
     top: 0;
-}
-
-#restart {
-    color: green;
-    font-size: 20px;
-    position: absolute;
-    z-index: 5;
-    cursor: pointer;
+    display: block;
 }
 
 .menu {
@@ -31,7 +24,7 @@ body {
     height: 100%;
     position: absolute;
     z-index: 6;
-    background: #000;
+    background: #333;
     opacity: .8;
 }
 
@@ -44,41 +37,29 @@ body {
     justify-content: center;
     align-items: center;
 }
-
-.button__wrapper {
-    display: flex;
-    justify-content: center;
-}
-
-.button {
-    width: 200px;
-    height: 100px;
-    background: #33a;
-    color: #fff;
-    font-size: 16px;
-    border: none;
-    cursor: pointer;
-    margin: 10px;
-}
-
 .title,
 .score {
     font-size: 32px;
-    color: #d06;
+    color: #f23a0c;
     margin: 10px 0 0 0;
 }
 
 .howto {
-    color: #fff;
+    color: #F47556;
     font-size: 20px;
     margin-top: 20px;
 }
 
+.mess {
+    color: #85ff0a;
+    margin-top: 20px;
+}
 .titlearea {
     text-align: center;
-    height: 150px;
 }
-
+.detail {
+    text-align: center;
+}
 .none {
     display: none;
 }

@@ -96,7 +96,7 @@ let sketch = function(s) {
                 endText.parent(title);
                 scoreText.parent(title);
                 menu.classList.toggle('none');
-                // again.classList.remove('none');
+                howto.classList.toggle('none');
                 // start.classList.add('none');
                 break;
 
@@ -114,8 +114,8 @@ let sketch = function(s) {
         player.edges();
 
         s.textSize(32);
-        s.fill(255);
-        s.text(`score: ${count}`, 10, 50);
+        s.fill(242, 58, 12);
+        s.text(`Score: ${count}`, 10, 50);
 
     };
 
@@ -138,7 +138,7 @@ let sketch = function(s) {
 		this.vel = s.createVector(0, 0);
 		this.isBoosting = false;
         this.theta = 0;
-        this.color = { filet: s.color(233, 160, 114), body: s.color(244, 69, 22) };
+        this.color = { filet: s.color(242, 166, 118), body: s.color(242, 58, 12) };
 
         this.move = function() {
             if(s.keyIsDown(s.RIGHT_ARROW)) {
@@ -255,7 +255,7 @@ let sketch = function(s) {
 		this.velocity = s.createVector(0, 0);
         this.theta = 0;
         this.heading = s.radians(90);
-        this.color = { filet: s.color(133, 260, 14), body: s.color(144, 169, 122) };
+        this.color = { filet: s.color(133, 255, 14), body: s.color(144, 169, 122) };
         this.acceleration = s.createVector(0, 0);
         this.maxspeed = 4;    // Maximum speed
         this.maxforce = 0.3; // Maximum steering force
@@ -458,7 +458,7 @@ let sketch = function(s) {
         this.acceleration = s.createVector(0, 0);
         this.velocity = s.createVector(s.random(-1, 1), s.random(-1, 1));
         this.position = s.createVector(x, y);
-        this.r = s.random(3.0, 6.0);
+        this.r = s.random(2.5, 5.0);
         this.maxspeed = 4;    // Maximum speed
         this.maxforce = 0.2; // Maximum steering force
     };
