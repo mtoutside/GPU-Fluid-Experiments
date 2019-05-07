@@ -49,7 +49,7 @@ let sketch = function(s) {
         }
 
         player = new Player();
-        enemy.push(new Enemy());
+        // enemy.push(new Enemy());
 
         bgm.setVolume(0.3); //音量調整
         bgm.loop();
@@ -153,9 +153,9 @@ let sketch = function(s) {
 
         this.move = function() {
             if(s.keyIsDown(s.RIGHT_ARROW)) {
-                player.setRotation(0.07);
+                player.setRotation(0.1);
             } else if(s.keyIsDown(s.LEFT_ARROW)) {
-                player.setRotation(-0.07);
+                player.setRotation(-0.1);
             } else if(s.keyIsDown(s.UP_ARROW)) {
                 player.boosting(true);
             }
