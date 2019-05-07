@@ -59,8 +59,9 @@ body {
 }
 
 .mess {
-    font-family: 'press', cursive;
+    font-family: "Nico Moji";
     color: #85ff0a;
+    font-size: 24px;
     margin-top: 20px;
 }
 .titlearea {
